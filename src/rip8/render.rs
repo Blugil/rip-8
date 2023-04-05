@@ -21,7 +21,7 @@ pub fn create_window(rip8: &mut Rip8) {
 
     // Create the window and canvas
     let window = video_subsystem
-        .window("Pixel Screen", window_size.0, window_size.1)
+        .window("rip8", window_size.0, window_size.1)
         .position_centered()
         .build()
         .unwrap();
