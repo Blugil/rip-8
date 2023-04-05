@@ -1,8 +1,10 @@
 use std::fs::File;
 use std::io::{self, Read};
+const SCREEN_WIDTH: usize = 64;
+const SCREEN_HEIGHT: usize = 32;
 
 pub struct Rip8 {
-    pub display: Vec<bool>,
+    pub display: Vec<Vec<bool>>,
     pub buffer: Vec<u8>,
     pub stack: Vec<u16>,
     pub i: u16,
@@ -41,7 +43,7 @@ impl Rip8 {
         }
 
         Self {
-            display: vec![false; 64 * 32],
+            display: vec![vec![false; SCREEN_WIDTH]; SCREEN_HEIGHT],
             buffer,
             stack: vec![0; 16],
             i: 0x200,
@@ -59,7 +61,7 @@ impl Rip8 {
         let mut f = File::open(path)?;
         let mut buffer: Vec<u8> = Vec::new();
         // perhaps can read directly into the buffer to save time?
-        match  f.read_to_end(&mut buffer) {
+        match f.read_to_end(&mut buffer) {
             Ok(_) => {
                 for i in 0..buffer.len() {
                     self.buffer[0x200 + i] = buffer[i];
@@ -67,15 +69,13 @@ impl Rip8 {
                 println!("loaded the program!");
                 Ok(())
             }
-            Err(e) => {
-                Err(e)
-            }
+            Err(e) => Err(e),
         }
     }
 
     // for now
     #[allow(unused)]
-    pub fn set_pixel(&mut self, x: i8, y: i8) {
+    pub fn invert_pixel(&mut self, x: i8, y: i8) {
         //swap pixel values
 
         // handles index wrapping
@@ -89,8 +89,15 @@ impl Rip8 {
         if y >= 32 {
             y_wrap = (y % 32).try_into().unwrap();
         } else if y < 0 {
-            y_wrap = (32 - (x.abs() % 32)).try_into().unwrap();
+            y_wrap = (32 - (y.abs() % 32)).try_into().unwrap();
         }
-        self.display[y_wrap * 64 + x_wrap] = !self.display[y_wrap * 64 + x_wrap]
+
+        // swaps the bit at the correct coordinate
+        self.display[x_wrap][y_wrap] = !self.display[x_wrap][y_wrap];
+    }
+
+    #[allow(unused)]
+    pub fn clear(&mut self) {
+        self.display.clear()
     }
 }
