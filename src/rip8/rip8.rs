@@ -1,7 +1,9 @@
+
 use std::fs::File;
 use std::io::{self, Read};
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
+
 
 pub struct Rip8 {
     pub display: Vec<Vec<bool>>,
@@ -17,7 +19,7 @@ pub struct Rip8 {
 
 impl Rip8 {
     pub fn new() -> Self {
-        let mut buffer = vec![0; 4096];
+        let mut buffer = vec![0 as u8; 4096];
 
         let base_sprites = [
             0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -39,10 +41,11 @@ impl Rip8 {
         ];
 
         for i in 0..base_sprites.len() {
-            buffer[0x0 + i] = base_sprites[i];
+            buffer[0x050 + i] = base_sprites[i];
         }
 
         Self {
+            // 2d [y][x] boolean vector
             display: vec![vec![false; SCREEN_WIDTH]; SCREEN_HEIGHT],
             buffer,
             stack: vec![0; 16],
