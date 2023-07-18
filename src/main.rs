@@ -6,9 +6,8 @@ use std::env;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let mut rip = Rip8::new();
-    rip.load_program(args[1].to_string()).unwrap();
+    let mut rip8 = Rip8::new();
+    rip8.load_program(args[1].to_string()).unwrap();
 
-    render::create_window(&mut rip); // main window thread
-    // start another thread for the cpu here
+    render::create_window(&mut rip8); // main window thread
 }

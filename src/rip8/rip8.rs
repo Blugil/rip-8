@@ -1,18 +1,19 @@
-
 use std::fs::File;
 use std::io::{self, Read};
+
+use super::cpu::{self, Cpu};
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
-
 
 pub struct Rip8 {
     pub display: Vec<Vec<bool>>,
     pub buffer: Vec<u8>,
+    pub registers: Vec<u8>,
     pub stack: Vec<u16>,
     pub i: u16,
+    pub pc: u16,
     pub delay: u8,
     pub sound: u8,
-    pub pc: u16,
     pub pause: bool,
     pub speed: u32,
 }
@@ -20,6 +21,7 @@ pub struct Rip8 {
 impl Rip8 {
     pub fn new() -> Self {
         let mut buffer = vec![0 as u8; 4096];
+        let mut registers = vec![0 as u8; 16];
 
         let base_sprites = [
             0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -48,6 +50,7 @@ impl Rip8 {
             // 2d [y][x] boolean vector
             display: vec![vec![false; SCREEN_WIDTH]; SCREEN_HEIGHT],
             buffer,
+            registers,
             stack: vec![0; 16],
             i: 0x200,
             delay: 0,
@@ -74,6 +77,30 @@ impl Rip8 {
             }
             Err(e) => Err(e),
         }
+
+        //print the first opcode of the program
+    }
+
+    pub fn start_program(&mut self) {
+        //print the first opcode of the program
+        let cpu = Cpu { clock_speed: 700 };
+        cpu.emulate_cycle(self);
+        cpu.emulate_cycle(self);
+        cpu.emulate_cycle(self);
+    }
+
+    pub fn draw_sprite(&mut self, x: usize, y: usize, n: usize) -> bool {
+                
+        let hold_i = self.i;
+
+        for y in y..y+n {
+            let pixel = self.buffer[self.i as usize + y];
+            for x in x..x+8 {
+            }
+        }
+        
+
+        return false;
     }
 
     // for now
@@ -101,6 +128,6 @@ impl Rip8 {
 
     #[allow(unused)]
     pub fn clear(&mut self) {
-        self.display.clear()
+        self.display = vec![vec![false; SCREEN_WIDTH]; SCREEN_HEIGHT];
     }
 }

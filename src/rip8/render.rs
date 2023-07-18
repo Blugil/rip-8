@@ -32,6 +32,11 @@ pub fn create_window(rip8: &mut Rip8) {
     // Set the top-left pixel to on for testing
     rip8.invert_pixel(0, 0);
 
+    //basic test to start program
+    //this function will probably be thrown away as i implement the cpu
+    //but it should be fine for now
+    rip8.start_program(); // start another thread for the cpu here
+
     // Main loop
     'running: loop {
         // Handle events
