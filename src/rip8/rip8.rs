@@ -85,45 +85,27 @@ impl Rip8 {
         //print the first opcode of the program
         let cpu = Cpu { clock_speed: 700 };
         cpu.emulate_cycle(self);
-        cpu.emulate_cycle(self);
-        cpu.emulate_cycle(self);
-    }
-
-    pub fn draw_sprite(&mut self, x: usize, y: usize, n: usize) -> bool {
-                
-        let hold_i = self.i;
-
-        for y in y..y+n {
-            let pixel = self.buffer[self.i as usize + y];
-            for x in x..x+8 {
-            }
-        }
-        
-
-        return false;
     }
 
     // for now
     #[allow(unused)]
-    pub fn invert_pixel(&mut self, x: i8, y: i8) {
+    pub fn invert_pixel(&mut self, x: usize, y: usize) {
         //swap pixel values
 
+        //println!("x: {}, y: {}", x, y);
+
         // handles index wrapping
-        let mut x_wrap: usize = 0;
-        let mut y_wrap: usize = 0;
+        let mut x_wrap: usize = x;
+        let mut y_wrap: usize = y;
         if x >= 64 {
             x_wrap = (x % 64).try_into().unwrap();
-        } else if x < 0 {
-            x_wrap = (64 - (x.abs() % 64)).try_into().unwrap();
         }
         if y >= 32 {
             y_wrap = (y % 32).try_into().unwrap();
-        } else if y < 0 {
-            y_wrap = (32 - (y.abs() % 32)).try_into().unwrap();
         }
-
         // swaps the bit at the correct coordinate
-        self.display[x_wrap][y_wrap] = !self.display[x_wrap][y_wrap];
+        println!("x_wrap: {}, y_wrap: {}", x_wrap, y_wrap);
+        self.display[y_wrap][x_wrap] = !self.display[y_wrap][x_wrap];
     }
 
     #[allow(unused)]

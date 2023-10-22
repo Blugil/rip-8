@@ -6,6 +6,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use std::time::Duration;
 
+use super::cpu::Cpu;
 use super::rip8::Rip8;
 
 const PIXEL_SIZE: u32 = 30; // Size of each pixel in pixels
@@ -29,15 +30,16 @@ pub fn create_window(rip8: &mut Rip8) {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
+    let cpu = Cpu { clock_speed: 700 };
+
     // Set the top-left pixel to on for testing
-    rip8.invert_pixel(0, 0);
 
     //basic test to start program
     //this function will probably be thrown away as i implement the cpu
     //but it should be fine for now
     rip8.start_program(); // start another thread for the cpu here
-
-    // Main loop
+                          //
+                          // Main loop
     'running: loop {
         // Handle events
         for event in sdl_context.event_pump().unwrap().poll_iter() {
@@ -59,7 +61,6 @@ pub fn create_window(rip8: &mut Rip8) {
 
         // Clear the canvas to black
         canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
 
         for x in 0..SCREEN_WIDTH {
             for y in 0..SCREEN_HEIGHT {
@@ -81,6 +82,9 @@ pub fn create_window(rip8: &mut Rip8) {
         // Present the canvas to the window
         canvas.present();
         // sleeps for 1/60th of a second
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+        cpu.emulate_cycle(rip8);
+
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 2));
     }
 }
