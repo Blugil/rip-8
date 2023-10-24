@@ -1,14 +1,17 @@
 extern crate rand;
 use super::rip8::Rip8;
 use rand::Rng;
-use std::time::Duration;
 
 pub struct Cpu {
     pub clock_speed: u32,
+    pub timer_interval: u32,
+    pub delay_state: u8,
+    pub sound_state: u8,
+    pub halted: bool,
 }
 
 impl Cpu {
-    pub fn emulate_cycle(&self, rip8: &mut Rip8) {
+    pub fn emulate_cycle(&mut self, rip8: &mut Rip8) {
         let opcode = u16::from(rip8.buffer.get(usize::from(rip8.pc)).unwrap().to_owned()) << 8
             | u16::from(
                 rip8.buffer
@@ -19,10 +22,10 @@ impl Cpu {
 
         //println!("opcode: {:#04x}", opcode);
 
-        let reg_x = (opcode & 0x0F00) >> 8;
-        let reg_y = (opcode & 0x00F0) >> 4;
-        let reg_x_value = rip8.registers[usize::from(reg_x)];
-        let reg_y_value = rip8.registers[usize::from(reg_y)];
+        let reg_x_index = (opcode & 0x0F00) >> 8;
+        let reg_y_index = (opcode & 0x00F0) >> 4;
+        let reg_x_value = rip8.registers[usize::from(reg_x_index)];
+        let reg_y_value = rip8.registers[usize::from(reg_y_index)];
 
         match opcode & 0xF000 {
             //load index register with immediate value
@@ -33,20 +36,21 @@ impl Cpu {
                         //clear the screen
                         rip8.clear();
                         rip8.pc += 2;
-                        println!("cleared the screen!");
                     }
                     0x000E => {
                         //return from subroutine
                         rip8.pc = rip8.stack.pop().unwrap() + 2;
                         rip8.sp -= 1;
                     }
-                    _ => panic!("unknown opcode"),
+                    _ => panic!("unknown opcode: {:?}", opcode),
                 }
             }
+            //doesn't increment pc
             0x1000 => {
                 let address = opcode & 0x0FFF;
                 rip8.pc = address;
             }
+            //doesn't increment pc
             0x2000 => {
                 let address: u16 = opcode & 0x0FFF;
                 rip8.sp += 1;
@@ -54,10 +58,9 @@ impl Cpu {
                 rip8.pc = address;
             }
             0x3000 => {
-                let register = (opcode & 0x0F00) >> 8;
                 let value = opcode & 0x00FF;
                 //skip next instruction if value is equal to value stored in register
-                if rip8.registers[usize::from(register)] == value as u8 {
+                if reg_x_value == value as u8 {
                     rip8.pc += 2;
                 }
                 rip8.pc += 2;
@@ -66,7 +69,7 @@ impl Cpu {
                 let value = opcode & 0x00FF;
                 //skip next instruction if the value is not equal to the value stored in the
                 //register
-                if rip8.registers[usize::from(reg_x)] != value as u8 {
+                if reg_x_value != value as u8 {
                     rip8.pc += 2;
                 }
                 rip8.pc += 2;
@@ -80,95 +83,53 @@ impl Cpu {
             }
             0x6000 => {
                 let value = opcode & 0x00FF;
-                rip8.registers[usize::from(reg_x)] = value as u8;
+                rip8.registers[usize::from(reg_x_index)] = value as u8;
                 rip8.pc += 2;
             }
             0x7000 => {
                 let value = opcode & 0x00FF;
-                rip8.registers[usize::from(reg_x)] = reg_x_value.wrapping_add(value as u8);
+                rip8.registers[usize::from(reg_x_index)] = reg_x_value.wrapping_add(value as u8);
                 rip8.pc += 2;
             }
             0x8000 => {
+                // all increment PC by 2
                 match opcode & 0x000F {
-                    0x0000 => {
-                        rip8.registers[usize::from(reg_x)] = reg_y_value;
-                        rip8.pc += 2;
-                    }
-                    0x0001 => {
-                        rip8.registers[usize::from(reg_x)] = reg_x_value | reg_y_value;
-                        rip8.pc += 2;
-                    }
-                    0x0002 => {
-                        rip8.registers[usize::from(reg_x)] = reg_x_value & reg_y_value;
-                        rip8.pc += 2;
-                    }
-                    0x0003 => {
-                        rip8.registers[usize::from(reg_x)] = reg_x_value ^ reg_y_value;
-                        rip8.pc += 2;
-                    }
+                    0x0000 => rip8.registers[usize::from(reg_x_index)] = reg_y_value,
+                    0x0001 => rip8.registers[usize::from(reg_x_index)] = reg_x_value | reg_y_value,
+                    0x0002 => rip8.registers[usize::from(reg_x_index)] = reg_x_value & reg_y_value,
+                    0x0003 => rip8.registers[usize::from(reg_x_index)] = reg_x_value ^ reg_y_value,
                     0x0004 => {
                         //
                         //checks to see if the
                         let output: u16 = reg_x_value as u16 + reg_y_value as u16;
                         //some bit math to store the carry of an aaddition in Vf
-                        rip8.registers[usize::from(reg_x)] = (output & 0xFF) as u8;
+                        rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
                         rip8.registers[0xF as usize] = ((output >> 8) & 0x01) as u8;
-
-                        rip8.pc += 2;
                     }
                     //maybe wrong implementation of negatives?
                     0x0005 => {
                         //skip next instruction if the values are the same in Vx and Vy
-                        //
-                        //checks to see if the
-                        let output;
 
-                        if reg_x_value > reg_y_value {
-                            rip8.registers[0xF as usize] = 1;
-                        } else {
-                            rip8.registers[0xF as usize] = 0;
-                        }
-
-                        output = reg_x_value.overflowing_sub(reg_y_value).0;
-                        rip8.registers[usize::from(reg_x)] = (output & 0xFF) as u8;
-                        rip8.pc += 2;
+                        rip8.registers[0xF as usize] = (reg_x_value > reg_y_value) as u8;
+                        let output = reg_x_value.overflowing_sub(reg_y_value).0;
+                        rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
                     }
                     0x0006 => {
-                        if reg_x_value & 0x1 == 1 {
-                            rip8.registers[0xF as usize] = 1;
-                        } else {
-                            rip8.registers[0xF as usize] = 0;
-                        }
-                        rip8.registers[usize::from(reg_x)] = reg_x_value / 2;
-
-                        rip8.pc += 2;
+                        rip8.registers[0xF as usize] = (reg_x_value & 0x1 == 1) as u8;
+                        rip8.registers[usize::from(reg_x_index)] = reg_x_value / 2;
                     }
                     0x0007 => {
-                        let output;
-
-                        if reg_y_value > reg_x_value {
-                            rip8.registers[0xF as usize] = 1;
-                        } else {
-                            rip8.registers[0xF as usize] = 0;
-                        }
-
-                        output = reg_y_value.overflowing_sub(reg_x_value).0;
-                        rip8.registers[usize::from(reg_x)] = (output & 0xFF) as u8;
-
-                        rip8.pc += 2;
+                        rip8.registers[0xF as usize] = (reg_y_value > reg_x_value) as u8;
+                        let output = reg_y_value.overflowing_sub(reg_x_value).0;
+                        rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
                     }
                     0x000E => {
-                        if reg_x_value & 0x1 == 1 {
-                            rip8.registers[0xF as usize] = 1;
-                        } else {
-                            rip8.registers[0xF as usize] = 0;
-                        }
-                        rip8.registers[usize::from(reg_x)] = reg_x_value.overflowing_mul(2).0;
-
-                        rip8.pc += 2;
+                        rip8.registers[0xF as usize] = (reg_x_value & 0x1 == 1) as u8;
+                        rip8.registers[usize::from(reg_x_index)] = reg_x_value.overflowing_mul(2).0;
                     }
                     _ => panic!("unknown upcode"),
                 }
+                rip8.pc += 2;
             }
             0x9000 => {
                 //skip next instruction if the values are the same in Vx and Vy
@@ -189,7 +150,7 @@ impl Cpu {
             0xC000 => {
                 let value = (opcode & 0x00FF) as u8;
                 let rng: u8 = rand::thread_rng().gen_range(0..=255);
-                rip8.registers[usize::from(reg_x)] = rng & value;
+                rip8.registers[usize::from(reg_x_index)] = rng & value;
                 rip8.pc += 2;
             }
             //load register with immediate value
@@ -214,45 +175,60 @@ impl Cpu {
             }
             //keyboard related opcodes
             0xE000 => {
-                match opcode & 0x000F {
-                    0x000E => {
-                        println!("beep!");
+                // all increment PC by 2
+                //TODO
+                match opcode & 0x00FF {
+                    0x009E => {
+                        if rip8.keydown[reg_x_value as usize] {
+                            rip8.pc += 2;
+                        }
                     }
-                    0x0001 => {
-                        println!("beep!");
+                    0x00A1 => {
+                        if !(rip8.keydown[reg_x_value as usize]) {
+                            rip8.pc += 2;
+                        }
                     }
-                    _ => panic!("unknown opcode"),
+                    _ => panic!("unknown opcode: {:?}", opcode),
                 }
                 rip8.pc += 2;
             }
 
             0xF000 => {
+                // all increment PC by 2
                 match opcode & 0x00FF {
                     0x0007 => {
-                        println!("beep!");
+                        //TODO
+                        rip8.registers[reg_x_index as usize] = rip8.delay;
                     }
                     0x000A => {
-                        println!("beep!");
+                        //"halts" the program until a ky is pressed
+                        println!("current keypress: {}", rip8.keypress);
+                        if !self.halted {
+                            self.halted = true;
+                            rip8.keypress = 0xFF;
+                            for i in 0..rip8.keydown.len() {
+                                rip8.keydown[i] = false
+                            }
+                        }
+                        if rip8.keypress == 0xFF {
+                            rip8.pc -= 2;
+                        } else {
+                            rip8.registers[reg_x_index as usize] = rip8.keypress as u8;
+                            self.halted = false;
+                            rip8.keypress = 0xFF;
+                        }
                     }
-                    0x0015 => {
-                        println!("beep!");
-                    }
-                    0x0018 => {
-                        println!("beep!");
-                    }
-                    0x001E => {
-                        rip8.i += reg_x_value as u16;
-                    }
-                    0x0029 => {
-                        println!("beep!");
-                    }
+                    0x0015 => rip8.delay = reg_x_value,
+                    0x0018 => rip8.sound = reg_x_value,
+                    0x001E => rip8.i += reg_x_value as u16,
+                    0x0029 => rip8.i = (0x50 + (reg_x_value * 5)) as u16,
                     0x0033 => {
                         // really crude implementation without using the shift-add-three algo that
-                        // i will implement in the future
+                        // i will implement in the future (section borrowed from
+                        // https://github.com/aquova/chip8-book/blob/master/code/chip8_core/src/lib.rs)
+                        // https://en.wikipedia.org/wiki/Double_dabble
                         let hundreds = (reg_x_value / 100) as u8;
-                        // Fetch the tens digit by dividing by 10, tossing the ones digit and the decimal
                         let tens = ((reg_x_value / 10) % 10) as u8;
-                        // Fetch the ones digit by tossing the hundreds and the tens
                         let ones = (reg_x_value % 10) as u8;
 
                         rip8.buffer[rip8.i as usize] = hundreds;
@@ -261,40 +237,36 @@ impl Cpu {
                     }
                     // reading and loading register values from memory
                     0x0055 => {
-                        for x in 0..=reg_x {
+                        for x in 0..=reg_x_index {
                             rip8.buffer[rip8.i as usize] = rip8.registers[x as usize];
                             rip8.i += 1;
                         }
                     }
                     0x0065 => {
-                        for x in 0..=reg_x {
+                        for x in 0..=reg_x_index {
                             rip8.registers[x as usize] = rip8.buffer[rip8.i as usize];
                             rip8.i += 1;
                         }
                     }
-                    _ => panic!("unknown opcode"),
+                    _ => panic!("unknown opcode: {:?}", opcode),
                 }
                 rip8.pc += 2;
             }
-
-            _ => panic!("unknown opcode"),
+            _ => panic!("unknown opcode: {:?}", opcode),
         }
 
         if rip8.delay > 0 {
-            rip8.delay -= 1;
+            if self.delay_state as u32 == self.timer_interval {
+                rip8.delay -= 1;
+                self.delay_state = 0;
+            }
         }
 
         if rip8.sound > 0 {
-            println!("beep!");
-            rip8.sound -= 1;
-        }
-    }
-
-    #[allow(unused)]
-    pub fn start(&self) {
-        'clock: loop {
-            // cpu clock speed
-            std::thread::sleep(Duration::new(0, 1_000_000_000u32 / self.clock_speed));
+            if self.sound_state as u32 == self.timer_interval {
+                rip8.sound -= 1;
+                self.sound_state = 0;
+            }
         }
     }
 }

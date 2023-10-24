@@ -16,12 +16,13 @@ pub struct Rip8 {
     pub sound: u8,
     pub pause: bool,
     pub speed: u32,
+    pub keypress: u16,
+    pub keydown: Vec<bool>,
 }
 
 impl Rip8 {
     pub fn new() -> Self {
         let mut buffer = vec![0 as u8; 4096];
-        let registers = vec![0 as u8; 16];
 
         let base_sprites = [
             0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -50,7 +51,7 @@ impl Rip8 {
             // 2d [y][x] boolean vector
             display: vec![vec![false; SCREEN_WIDTH]; SCREEN_HEIGHT],
             buffer,
-            registers,
+            registers: vec![0 as u8; 16],
             stack: vec![0; 16],
             sp: 0,
             i: 0x200,
@@ -59,6 +60,8 @@ impl Rip8 {
             pc: 0x200,
             pause: false,
             speed: 10,
+            keypress: 0xFF,
+            keydown: vec![false; 16],
         }
     }
 
@@ -82,6 +85,7 @@ impl Rip8 {
         //print the first opcode of the program
     }
 
+    // needs to report collision
     pub fn invert_pixel(&mut self, x: usize, y: usize) {
         //swap pixel values
 
@@ -99,6 +103,10 @@ impl Rip8 {
     }
 
     pub fn clear(&mut self) {
-        self.display = vec![vec![false; SCREEN_WIDTH]; SCREEN_HEIGHT];
+        for i in 0..SCREEN_WIDTH {
+            for j in 0..SCREEN_HEIGHT {
+                self.display[j][i] = false;
+            }
+        }
     }
 }

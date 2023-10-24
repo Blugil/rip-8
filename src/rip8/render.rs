@@ -29,12 +29,274 @@ pub fn create_window(rip8: &mut Rip8) {
         .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
-    let cpu = Cpu { clock_speed: 700 };
 
+    let clock_speed = 700;
+    let timer_interval = clock_speed / 60;
+
+    let mut cpu = Cpu {
+        clock_speed: 700,
+        timer_interval,
+        delay_state: 0,
+        sound_state: 0,
+        halted: false,
+    };
+
+    canvas.set_draw_color(Color::RGB(0, 0, 0));
+
+    // main loop
     'running: loop {
         // Handle events
         for event in sdl_context.event_pump().unwrap().poll_iter() {
             match event {
+                Event::KeyDown {
+                    keycode: Some(Keycode::Num1),
+                    ..
+                } => {
+                    rip8.keydown[0x1] = true;
+                    println!("1 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Num2),
+                    ..
+                } => {
+                    rip8.keydown[0x2] = true;
+                    println!("2 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Num3),
+                    ..
+                } => {
+                    rip8.keydown[0x3] = true;
+                    println!("3 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Num4),
+                    ..
+                } => {
+                    rip8.keydown[0xC] = true;
+                    println!("C pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Q),
+                    ..
+                } => {
+                    rip8.keydown[0x4] = true;
+                    println!("4 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => {
+                    rip8.keydown[0x5] = true;
+                    println!("5 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::E),
+                    ..
+                } => {
+                    rip8.keydown[0x6] = true;
+                    println!("6 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::R),
+                    ..
+                } => {
+                    rip8.keydown[0xD] = true;
+                    println!("D pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => {
+                    rip8.keydown[0x7] = true;
+                    println!("7 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::S),
+                    ..
+                } => {
+                    rip8.keydown[0x8] = true;
+                    println!("8 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::D),
+                    ..
+                } => {
+                    rip8.keydown[0x9] = true;
+                    println!("9 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::F),
+                    ..
+                } => {
+                    rip8.keydown[0xE] = true;
+                    println!("E pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Z),
+                    ..
+                } => {
+                    rip8.keydown[0xA] = true;
+                    println!("A pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::X),
+                    ..
+                } => {
+                    rip8.keydown[0x0] = true;
+                    println!("0 pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::C),
+                    ..
+                } => {
+                    rip8.keydown[0xB] = true;
+                    println!("B pressed")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::V),
+                    ..
+                } => {
+                    rip8.keydown[0xF] = true;
+                    println!("F pressed")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Num1),
+                    ..
+                } => {
+                    rip8.keydown[0x1] = false;
+                    rip8.keypress = 0x1;
+                    println!("1 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Num2),
+                    ..
+                } => {
+                    rip8.keypress = 0x2;
+                    rip8.keydown[0x2] = false;
+                    println!("2 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Num3),
+                    ..
+                } => {
+                    rip8.keypress = 0x3;
+                    rip8.keydown[0x3] = false;
+                    println!("3 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Num4),
+                    ..
+                } => {
+                    rip8.keypress = 0xC;
+                    rip8.keydown[0xC] = false;
+                    println!("C released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Q),
+                    ..
+                } => {
+                    rip8.keypress = 0x4;
+                    rip8.keydown[0x4] = false;
+                    println!("4 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::W),
+                    ..
+                } => {
+                    rip8.keypress = 0x5;
+                    rip8.keydown[0x5] = false;
+                    println!("5 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::E),
+                    ..
+                } => {
+                    rip8.keypress = 0x6;
+                    rip8.keydown[0x6] = false;
+                    println!("6 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::R),
+                    ..
+                } => {
+                    rip8.keypress = 0xD;
+                    rip8.keydown[0xD] = false;
+                    println!("D released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => {
+                    rip8.keypress = 0x7;
+                    rip8.keydown[0x7] = false;
+                    println!("7 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::S),
+                    ..
+                } => {
+                    rip8.keypress = 0x8;
+                    rip8.keydown[0x8] = false;
+                    println!("8 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::D),
+                    ..
+                } => {
+                    rip8.keypress = 0x9;
+                    rip8.keydown[0x9] = false;
+                    println!("9 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::F),
+                    ..
+                } => {
+                    rip8.keypress = 0xE;
+                    rip8.keydown[0xE] = false;
+                    println!("E released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::Z),
+                    ..
+                } => {
+                    rip8.keypress = 0xA;
+                    rip8.keydown[0xA] = false;
+                    println!("A released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::X),
+                    ..
+                } => {
+                    rip8.keypress = 0x0;
+                    rip8.keydown[0x0] = false;
+                    println!("0 released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::C),
+                    ..
+                } => {
+                    rip8.keypress = 0xB;
+                    rip8.keydown[0xB] = false;
+                    println!("B released")
+                }
+                Event::KeyUp {
+                    keycode: Some(Keycode::V),
+                    ..
+                } => {
+                    rip8.keypress = 0xF;
+                    rip8.keydown[0xF] = false;
+                    println!("F released")
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::P),
+                    ..
+                } => {
+                    rip8.pc = 0x200;
+                    rip8.i = 0x200;
+                    rip8.clear();
+                    println!("clear screen and restart, new display");
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
@@ -44,21 +306,21 @@ pub fn create_window(rip8: &mut Rip8) {
             }
         }
 
-        // Clear the canvas to black
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-
         for x in 0..SCREEN_WIDTH {
             for y in 0..SCREEN_HEIGHT {
+                let pixel_rect = Rect::new(
+                    x as i32 * PIXEL_SIZE as i32,
+                    y as i32 * PIXEL_SIZE as i32,
+                    PIXEL_SIZE,
+                    PIXEL_SIZE,
+                );
                 if rip8.display[y as usize][x as usize] {
                     // draws a white "pixel" to the screen as a representation of the byte value in
                     // the dsplay array
-                    let pixel_rect = Rect::new(
-                        x as i32 * PIXEL_SIZE as i32,
-                        y as i32 * PIXEL_SIZE as i32,
-                        PIXEL_SIZE,
-                        PIXEL_SIZE,
-                    );
                     canvas.set_draw_color(Color::RGB(255, 255, 255));
+                    canvas.fill_rect(pixel_rect).unwrap();
+                } else {
+                    canvas.set_draw_color(Color::RGB(0, 0, 0));
                     canvas.fill_rect(pixel_rect).unwrap();
                 }
             }
@@ -70,6 +332,8 @@ pub fn create_window(rip8: &mut Rip8) {
 
         cpu.emulate_cycle(rip8);
 
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        rip8.keypress = 0xFF;
+
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / cpu.clock_speed));
     }
 }
