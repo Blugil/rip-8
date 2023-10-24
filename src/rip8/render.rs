@@ -29,17 +29,8 @@ pub fn create_window(rip8: &mut Rip8) {
         .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
-
     let cpu = Cpu { clock_speed: 700 };
 
-    // Set the top-left pixel to on for testing
-
-    //basic test to start program
-    //this function will probably be thrown away as i implement the cpu
-    //but it should be fine for now
-    rip8.start_program(); // start another thread for the cpu here
-                          //
-                          // Main loop
     'running: loop {
         // Handle events
         for event in sdl_context.event_pump().unwrap().poll_iter() {
@@ -48,12 +39,6 @@ pub fn create_window(rip8: &mut Rip8) {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
-                Event::KeyDown {
-                    keycode: Some(sdl2::keyboard::Keycode::H),
-                    ..
-                } => {
-                    rip8.invert_pixel(0, 0);
-                }
                 // handles every other arm of the branch
                 _ => {}
             }
@@ -85,6 +70,6 @@ pub fn create_window(rip8: &mut Rip8) {
 
         cpu.emulate_cycle(rip8);
 
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 2));
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 }

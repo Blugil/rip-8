@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::{self, Read};
 
-use super::cpu::{self, Cpu};
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
 
@@ -10,6 +9,7 @@ pub struct Rip8 {
     pub buffer: Vec<u8>,
     pub registers: Vec<u8>,
     pub stack: Vec<u16>,
+    pub sp: u16,
     pub i: u16,
     pub pc: u16,
     pub delay: u8,
@@ -21,7 +21,7 @@ pub struct Rip8 {
 impl Rip8 {
     pub fn new() -> Self {
         let mut buffer = vec![0 as u8; 4096];
-        let mut registers = vec![0 as u8; 16];
+        let registers = vec![0 as u8; 16];
 
         let base_sprites = [
             0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -52,6 +52,7 @@ impl Rip8 {
             buffer,
             registers,
             stack: vec![0; 16],
+            sp: 0,
             i: 0x200,
             delay: 0,
             sound: 0,
@@ -81,18 +82,8 @@ impl Rip8 {
         //print the first opcode of the program
     }
 
-    pub fn start_program(&mut self) {
-        //print the first opcode of the program
-        let cpu = Cpu { clock_speed: 700 };
-        cpu.emulate_cycle(self);
-    }
-
-    // for now
-    #[allow(unused)]
     pub fn invert_pixel(&mut self, x: usize, y: usize) {
         //swap pixel values
-
-        //println!("x: {}, y: {}", x, y);
 
         // handles index wrapping
         let mut x_wrap: usize = x;
@@ -104,11 +95,9 @@ impl Rip8 {
             y_wrap = (y % 32).try_into().unwrap();
         }
         // swaps the bit at the correct coordinate
-        println!("x_wrap: {}, y_wrap: {}", x_wrap, y_wrap);
         self.display[y_wrap][x_wrap] = !self.display[y_wrap][x_wrap];
     }
 
-    #[allow(unused)]
     pub fn clear(&mut self) {
         self.display = vec![vec![false; SCREEN_WIDTH]; SCREEN_HEIGHT];
     }
