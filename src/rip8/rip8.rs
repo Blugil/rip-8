@@ -85,16 +85,8 @@ impl Rip8 {
         //print the first opcode of the program
     }
 
-    pub fn print_display(self) {
-        for i in 0..SCREEN_WIDTH {
-            for j in 0..SCREEN_HEIGHT {
-                print!("{}", self.display[j][i] as u8);
-            }
-            println!("");
-        }
-    }
     // needs to report collision
-    pub fn invert_pixel(&mut self, x: usize, y: usize) {
+    pub fn invert_pixel(&mut self, x: usize, y: usize) -> bool {
         //swap pixel values
 
         // handles index wrapping
@@ -107,7 +99,10 @@ impl Rip8 {
             y_wrap = (y % 32).try_into().unwrap();
         }
         // swaps the bit at the correct coordinate
+        let collision: bool = self.display[y_wrap][x_wrap];
         self.display[y_wrap][x_wrap] = !self.display[y_wrap][x_wrap];
+
+        return collision;
     }
 
     pub fn clear(&mut self) {

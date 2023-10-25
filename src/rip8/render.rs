@@ -4,6 +4,8 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use sdl2::ttf;
+use std::path::Path;
 use std::time::Duration;
 
 use super::cpu::Cpu;
@@ -13,24 +15,27 @@ const PIXEL_SIZE: u32 = 30; // Size of each pixel in pixels
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
 
+
 pub fn create_window(rip8: &mut Rip8) {
     // Initialize SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
     // Calculate the window size based on the pixel size
-    let window_size = (SCREEN_WIDTH * PIXEL_SIZE, SCREEN_HEIGHT * PIXEL_SIZE);
+    let window_size = (SCREEN_WIDTH * PIXEL_SIZE, SCREEN_HEIGHT * PIXEL_SIZE + 200);
 
     // Create the window and canvas
     let window = video_subsystem
         .window("rip8", window_size.0, window_size.1)
         .position_centered()
+        .opengl()
         .build()
         .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
 
     let clock_speed = 700;
+    let fps = 60;
     let timer_interval = clock_speed / 60;
 
     let mut cpu = Cpu {
@@ -41,11 +46,19 @@ pub fn create_window(rip8: &mut Rip8) {
         halted: false,
     };
 
-    canvas.set_draw_color(Color::RGB(0, 0, 0));
 
+    //let texture = canvas.texture_creator();
+    //let ttf_context = ttf::init().map_err(|e| e.to_string()).expect("unable to initialize font");
+
+    //let font_path: &Path = Path::new(&"../../resources/fonts/standard-book-webfont.ttf");
+    //let mut font = ttf_context.load_font(font_path, 128);
+    
+
+    canvas.set_draw_color(Color::RGB(0, 0, 0));
 
     // main loop
     'running: loop {
+        canvas.clear();
         // Handle events
         for event in sdl_context.event_pump().unwrap().poll_iter() {
             match event {
@@ -288,21 +301,23 @@ pub fn create_window(rip8: &mut Rip8) {
                 if rip8.display[y as usize][x as usize] {
                     // draws a white "pixel" to the screen as a representation of the byte value in
                     // the dsplay array
-                    canvas.set_draw_color(Color::RGB(255, 255, 255));
+                    canvas.set_draw_color(Color::RGB(140, 89, 77));
                     canvas.fill_rect(pixel_rect).unwrap();
                 } else {
-                    canvas.set_draw_color(Color::RGB(0, 0, 0));
+                    canvas.set_draw_color(Color::RGB(14, 14, 14));
                     canvas.fill_rect(pixel_rect).unwrap();
                 }
+                canvas.set_draw_color(Color::RGB(0, 0, 0));
             }
         }
 
         // Present the canvas to the window
+        // render the window at 60fps but keep the cpu at a normal clock
         canvas.present();
-        // sleeps for 1/60th of a second
+        for _ in 0..timer_interval {
+            cpu.emulate_cycle(rip8);
+        }
 
-        cpu.emulate_cycle(rip8);
-
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / cpu.clock_speed));
+        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / fps));
     }
 }

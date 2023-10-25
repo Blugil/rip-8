@@ -157,21 +157,26 @@ impl Cpu {
             //load register with immediate value
             //draw sprite to screen
             0xD000 => {
-                println!("vx: {}, vy: {}", reg_x_value, reg_y_value);
                 let n = (opcode & 0x000F) as u8;
-                let collision: bool = false;
+                let mut collision: bool = false;
                 for mem_offset in 0..n {
                     //integer value for sprite byte stored in memory
                     let sprite = rip8.buffer[(rip8.i + mem_offset as u16) as usize];
                     for sprite_offset in 0..8 {
+                        //if any pixel causes a collision set collision to true
                         if (sprite >> sprite_offset) & 1 == 1 {
-                            rip8.invert_pixel(
+                            collision = rip8.invert_pixel(
                                 (reg_x_value + 7 - sprite_offset) as usize,
                                 (reg_y_value + mem_offset) as usize,
-                            );
+                            ) | collision;
                         }
                     }
                 }
+                
+                //println!("opcode: {:#04x}", opcode);
+                //println!("trying to draw sprite at: {}, {} with a nibble of: {}", reg_x_value, reg_y_value, n);
+
+                rip8.registers[0xF as usize] = collision as u8;
 
                 rip8.pc += 2;
             }
@@ -204,7 +209,7 @@ impl Cpu {
                     }
                     0x000A => {
                         //"halts" the program until a ky is pressed
-                        println!("current keypress: {}", rip8.keypress);
+                        //println!("current keypress: {}", rip8.keypress);
                         if !self.halted {
                             self.halted = true;
                             rip8.keypress = 0xFF;
