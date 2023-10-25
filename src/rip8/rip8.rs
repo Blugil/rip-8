@@ -85,6 +85,14 @@ impl Rip8 {
         //print the first opcode of the program
     }
 
+    pub fn print_display(self) {
+        for i in 0..SCREEN_WIDTH {
+            for j in 0..SCREEN_HEIGHT {
+                print!("{}", self.display[j][i] as u8);
+            }
+            println!("");
+        }
+    }
     // needs to report collision
     pub fn invert_pixel(&mut self, x: usize, y: usize) {
         //swap pixel values

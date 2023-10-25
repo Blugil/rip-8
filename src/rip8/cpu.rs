@@ -109,23 +109,24 @@ impl Cpu {
                     //maybe wrong implementation of negatives?
                     0x0005 => {
                         //skip next instruction if the values are the same in Vx and Vy
-
-                        rip8.registers[0xF as usize] = (reg_x_value > reg_y_value) as u8;
-                        let output = reg_x_value.overflowing_sub(reg_y_value).0;
+                        let (output, overflow) = reg_x_value.overflowing_sub(reg_y_value);
                         rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
+                        rip8.registers[0xF as usize] = !overflow as u8;
                     }
                     0x0006 => {
-                        rip8.registers[0xF as usize] = (reg_x_value & 0x1 == 1) as u8;
-                        rip8.registers[usize::from(reg_x_index)] = reg_x_value / 2;
+                        // order of this matters ?? for the 4-test rom
+                        rip8.registers[usize::from(reg_x_index)] = reg_x_value >> 1;
+                        rip8.registers[0xF as usize] = reg_x_value & 0x1;
                     }
                     0x0007 => {
-                        rip8.registers[0xF as usize] = (reg_y_value > reg_x_value) as u8;
-                        let output = reg_y_value.overflowing_sub(reg_x_value).0;
+                        let (output, overflow) = reg_y_value.overflowing_sub(reg_x_value);
                         rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
+                        rip8.registers[0xF as usize] = !overflow as u8;
                     }
                     0x000E => {
-                        rip8.registers[0xF as usize] = (reg_x_value & 0x1 == 1) as u8;
-                        rip8.registers[usize::from(reg_x_index)] = reg_x_value.overflowing_mul(2).0;
+                        let (output, overflow) = reg_x_value.overflowing_mul(2);
+                        rip8.registers[usize::from(reg_x_index)] = output;
+                        rip8.registers[0xF as usize] = overflow as u8;
                     }
                     _ => panic!("unknown upcode"),
                 }
@@ -156,15 +157,16 @@ impl Cpu {
             //load register with immediate value
             //draw sprite to screen
             0xD000 => {
+                println!("vx: {}, vy: {}", reg_x_value, reg_y_value);
                 let n = (opcode & 0x000F) as u8;
-
+                let collision: bool = false;
                 for mem_offset in 0..n {
                     //integer value for sprite byte stored in memory
                     let sprite = rip8.buffer[(rip8.i + mem_offset as u16) as usize];
                     for sprite_offset in 0..8 {
                         if (sprite >> sprite_offset) & 1 == 1 {
                             rip8.invert_pixel(
-                                (reg_x_value + 8 - sprite_offset) as usize,
+                                (reg_x_value + 7 - sprite_offset) as usize,
                                 (reg_y_value + mem_offset) as usize,
                             );
                         }
