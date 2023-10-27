@@ -16,7 +16,6 @@ use std::time::Duration;
 use egui_sdl2_gl as egui_backend;
 
 use super::cpu::Cpu;
-use super::gui::{draw_side_panel, draw_bottom_panel, draw_game_window};
 use super::rip8::Rip8;
 
 const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
@@ -80,9 +79,95 @@ pub fn create_window(rip8: &mut Rip8) {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        draw_side_panel(rip8, &egui_ctx);
-        draw_bottom_panel(&egui_ctx);
-        draw_game_window(rip8, &egui_ctx, SCREEN_HEIGHT, SCREEN_WIDTH);
+        egui::SidePanel::right("right panel")
+            .resizable(false)
+            .show(&egui_ctx, |ui| {
+                ui.label(" ");
+                ui.horizontal(|ui| {
+                    ui.label("v[x]");
+                    ui.separator();
+                    ui.label("stack");
+                });
+                ui.set_width(400.0);
+                ui.separator();
+                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                    ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
+                        ui.label(format!(
+                            "v0: {:#04x} \nv1: {:#04x} \nv2: {:#04x} \nv3: {:#04x} \nv4: {:#04x} \nv5: {:#04x} \nv6: {:#04x} \nv7: {:#04x} \nv8: {:#04x} \nv9: {:#04x} \nvA: {:#04x} \nvB: {:#04x} \nvC: {:#04x} \nvD: {:#04x} \nvE: {:#04x} \nvF: {:#04x}",
+                            rip8.registers[0x0],
+                            rip8.registers[0x1],
+                            rip8.registers[0x2],
+                            rip8.registers[0x3],
+                            rip8.registers[0x4],
+                            rip8.registers[0x5],
+                            rip8.registers[0x6],
+                            rip8.registers[0x7],
+                            rip8.registers[0x8],
+                            rip8.registers[0x9],
+                            rip8.registers[0xA],
+                            rip8.registers[0xB],
+                            rip8.registers[0xC],
+                            rip8.registers[0xD],
+                            rip8.registers[0xE],
+                            rip8.registers[0xF]
+                        ));
+                    });
+                    ui.separator();
+                    ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
+                        ui.label(format!(
+                            "{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x} \n{:#04x}",
+                            rip8.stack[0xF],
+                            rip8.stack[0xE],
+                            rip8.stack[0xD],
+                            rip8.stack[0xC],
+                            rip8.stack[0xB],
+                            rip8.stack[0xA],
+                            rip8.stack[0x9],
+                            rip8.stack[0x8],
+                            rip8.stack[0x7],
+                            rip8.stack[0x6],
+                            rip8.stack[0x5],
+                            rip8.stack[0x4],
+                            rip8.stack[0x3],
+                            rip8.stack[0x2],
+                            rip8.stack[0x1],
+                            rip8.stack[0x0],
+                        ));
+                    });
+                });
+            });
+
+        egui::TopBottomPanel::bottom("bottom panel").show(&egui_ctx, |ui| {
+            ui.set_height(350.0);
+            ui.label("Bottom panel");
+            ui.available_size();
+        });
+
+        egui::CentralPanel::default().show(&egui_ctx, |ui| {
+            egui::Frame::dark_canvas(&Style::default()).show(ui, |ui| {
+                let width = ui.available_size()[0];
+                let height = ui.available_size()[1];
+                let pixel_size = if (width / 64.0) >= (height / 32.0) {
+                    height / 32.0
+                } else {
+                    width / 64.0
+                };
+                for y in 0..SCREEN_HEIGHT {
+                    for x in 0..SCREEN_WIDTH {
+                        let color = if rip8.display[y as usize][x as usize] {
+                            egui::Color32::from_rgb(140, 89, 77)
+                        } else {
+                            egui::Color32::from_rgb(14, 14, 14)
+                        };
+                        let rect = egui::Rect::from_min_size(
+                            egui::pos2(x as f32 * pixel_size, y as f32 * pixel_size),
+                            egui::vec2(pixel_size + 1.0, pixel_size + 1.0),
+                        );
+                        ui.painter().rect_filled(rect, 0.0, color);
+                    }
+                }
+            });
+        });
 
         let FullOutput {
             platform_output,
