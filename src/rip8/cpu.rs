@@ -172,7 +172,7 @@ impl Cpu {
                         }
                     }
                 }
-                
+
                 //println!("opcode: {:#04x}", opcode);
                 //println!("trying to draw sprite at: {}, {} with a nibble of: {}", reg_x_value, reg_y_value, n);
 

@@ -1,22 +1,19 @@
 //extern crate sdl2;
 
 //use sdl2::event::Event;
-use egui_backend::egui::{FullOutput, Style};
+use egui_backend::egui::{FontId, FullOutput, Style, TextStyle};
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
-use std::time::Instant;
 use sdl2::video::SwapInterval;
+use std::time::Instant;
 
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use std::time::Duration;
 
-
-
 use egui_sdl2_gl as egui_backend;
-
 
 use super::cpu::Cpu;
 use super::rip8::Rip8;
@@ -25,18 +22,16 @@ const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
 
-
 pub fn create_window(rip8: &mut Rip8) {
-
     // Calculate the window size based on the pixel size
-    let window_size = (SCREEN_WIDTH * PIXEL_SIZE + 100, SCREEN_HEIGHT * PIXEL_SIZE + 100);
+    let window_size = (SCREEN_WIDTH * PIXEL_SIZE, SCREEN_HEIGHT * PIXEL_SIZE);
 
     let clock_speed = 700;
     let fps = 60;
     let timer_interval = clock_speed / fps;
 
     let mut quit = false;
-    
+
     // Initialize SDL
 
     let sdl_context = sdl2::init().unwrap();
@@ -63,14 +58,17 @@ pub fn create_window(rip8: &mut Rip8) {
     let _ctx = canvas.window().gl_create_context().unwrap();
     let shader_ver = ShaderVersion::Adaptive;
 
-    let (mut painter, mut egui_state) = egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(2.5));
+    let (mut painter, mut egui_state) =
+        egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(2.5));
     let egui_ctx = egui::Context::default();
-
 
     let start_time = Instant::now();
 
-
-    canvas.window().subsystem().gl_set_swap_interval(SwapInterval::Immediate).unwrap();
+    canvas
+        .window()
+        .subsystem()
+        .gl_set_swap_interval(SwapInterval::Immediate)
+        .unwrap();
 
     let mut cpu = Cpu {
         clock_speed,
@@ -80,65 +78,82 @@ pub fn create_window(rip8: &mut Rip8) {
         halted: false,
     };
 
-
-
-    canvas.set_draw_color(Color::RGB(0, 0, 0));
-
     // main loop
     'running: loop {
-
-
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        egui::CentralPanel::default()
-            .show(&egui_ctx, |ui| {
+        egui::CentralPanel::default().show(&egui_ctx, |ui| {
             // Your Egui widgets here
             egui::Frame::dark_canvas(&Style::default())
-                .fill(egui::Color32::BLACK)
                 .show(ui, |ui| {
-                for y in 0..SCREEN_HEIGHT {
-                    for x in 0..SCREEN_WIDTH {
-                        let color = if rip8.display[y as usize][x as usize] {
-                            egui::Color32::from_rgb(140,89,77)
-                        } else {
-                            egui::Color32::from_rgb(14,14,14)
-                        };
+                    for y in 0..SCREEN_HEIGHT {
+                        for x in 0..SCREEN_WIDTH {
+                            let color = if rip8.display[y as usize][x as usize] {
+                                egui::Color32::from_rgb(140, 89, 77)
+                            } else {
+                                egui::Color32::from_rgb(14, 14, 14)
+                            };
 
-                        let rect = egui::Rect::from_min_max(
-                            egui::pos2((x * PIXEL_SIZE) as f32, (y * PIXEL_SIZE) as f32),
-                            egui::pos2(((x + 1) * PIXEL_SIZE) as f32, ((y + 1) * PIXEL_SIZE) as f32),
-                        );
+                            let rect = egui::Rect::from_min_max(
+                                egui::pos2((x * PIXEL_SIZE) as f32, (y * PIXEL_SIZE) as f32),
+                                egui::pos2(
+                                    ((x as f32 + 1.03) * PIXEL_SIZE as f32) as f32,
+                                    ((y as f32 + 1.03) * PIXEL_SIZE as f32) as f32,
+                                ),
+                            );
 
-                        ui.painter().rect_filled(rect, 0.0, color);
+                            ui.painter().rect_filled(rect, 0.0, color);
+                        }
                     }
-                }
-            });
+                });
         });
-
 
         egui::SidePanel::right("right panel")
             .resizable(false)
-            .max_width(200.0)
             .show(&egui_ctx, |ui| {
                 ui.label(" ");
-                ui.label(format!("v0: {} \nv1: {}", rip8.registers[0x0], rip8.registers[0x1]));
+                ui.label(format!(
+                    "v0: {} 
+                                 \nv1: {}
+                                 \nv2: {}
+                                 \nv3: {}
+                                 \nv4: {}
+                                 \nv5: {}
+                                 \nv6: {}
+                                 \nv7: {}
+                                 \nv8: {}
+                                 \nv9: {}
+                                 \nvA: {}
+                                 \nvB: {}
+                                 \nvC: {}
+                                 \nvD: {}
+                                 \nvE: {}
+                                 \nvF: {}",
+                    rip8.registers[0x0],
+                    rip8.registers[0x1],
+                    rip8.registers[0x2],
+                    rip8.registers[0x3],
+                    rip8.registers[0x4],
+                    rip8.registers[0x5],
+                    rip8.registers[0x6],
+                    rip8.registers[0x7],
+                    rip8.registers[0x8],
+                    rip8.registers[0x9],
+                    rip8.registers[0xA],
+                    rip8.registers[0xB],
+                    rip8.registers[0xC],
+                    rip8.registers[0xD],
+                    rip8.registers[0xE],
+                    rip8.registers[0xF]
+                ));
                 ui.separator();
-                if ui.button("Quit?").clicked() {
-                    quit = true;
-                }
-            }
-        );
+            });
 
         egui::TopBottomPanel::bottom("bottom panel")
-            .exact_height(200.0)
             .show(&egui_ctx, |ui| {
                 ui.label("Bottom panel");
-            }
-        );
-
-
-
+            });
 
         let FullOutput {
             platform_output,
@@ -385,38 +400,8 @@ pub fn create_window(rip8: &mut Rip8) {
         }
         canvas.clear();
 
-        // redraw the screen
-        //for x in 0..SCREEN_WIDTH {
-        //    for y in 0..SCREEN_HEIGHT {
-        //        let pixel_rect = Rect::new(
-        //            x as i32 * PIXEL_SIZE as i32,
-        //            y as i32 * PIXEL_SIZE as i32,
-        //            PIXEL_SIZE,
-        //            PIXEL_SIZE,
-        //        );
-        //        if rip8.display[y as usize][x as usize] {
-        //            // draws a white "pixel" to the screen as a representation of the byte value in
-        //            // the dsplay array
-        //            canvas.set_draw_color(Color::RGB(140, 89, 77));
-        //            canvas.fill_rect(pixel_rect).unwrap();
-        //        } else {
-        //            canvas.set_draw_color(Color::RGB(14, 14, 14));
-        //            canvas.fill_rect(pixel_rect).unwrap();
-        //        }
-        //        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        //    }
-        //}
-
-
-        // render the window at 60fps but keep the cpu at a normal clock
-        // Present the canvas to the window
-        
         painter.paint_jobs(None, textures_delta, paint_jobs);
-
         canvas.window().gl_swap_window();
-
-        //canvas.present();
-
 
         for _ in 0..timer_interval {
             cpu.emulate_cycle(rip8);
