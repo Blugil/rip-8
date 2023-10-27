@@ -39,10 +39,10 @@ impl Cpu {
                     }
                     0x000E => {
                         //return from subroutine
-                        rip8.pc = rip8.stack.pop().unwrap() + 2;
+                        rip8.pc = rip8.stack[rip8.sp as usize] + 2;
                         rip8.sp -= 1;
                     }
-                    _ => panic!("unknown opcode: {:?}", opcode),
+                    _ => panic!("unknown opcode: {:#04x}", opcode),
                 }
             }
             //doesn't increment pc
@@ -54,7 +54,7 @@ impl Cpu {
             0x2000 => {
                 let address: u16 = opcode & 0x0FFF;
                 rip8.sp += 1;
-                rip8.stack.push(rip8.pc);
+                rip8.stack[rip8.sp as usize] = rip8.pc;
                 rip8.pc = address;
             }
             0x3000 => {
@@ -195,7 +195,7 @@ impl Cpu {
                             rip8.pc += 2;
                         }
                     }
-                    _ => panic!("unknown opcode: {:?}", opcode),
+                    _ => panic!("unknown opcode: {:#04x}", opcode),
                 }
                 rip8.pc += 2;
             }
@@ -255,11 +255,11 @@ impl Cpu {
                             rip8.i += 1;
                         }
                     }
-                    _ => panic!("unknown opcode: {:?}", opcode),
+                    _ => panic!("unknown opcode: {:#04x}", opcode),
                 }
                 rip8.pc += 2;
             }
-            _ => panic!("unknown opcode: {:?}", opcode),
+            _ => panic!("unknown opcode: {:#04x}", opcode),
         }
 
         if rip8.delay > 0 {

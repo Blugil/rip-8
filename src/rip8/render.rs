@@ -77,6 +77,9 @@ pub fn create_window(rip8: &mut Rip8) {
 
     // main loop
     'running: loop {
+
+        //let frame_time = Instant::now();
+
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
@@ -120,6 +123,9 @@ pub fn create_window(rip8: &mut Rip8) {
         for _ in 0..timer_interval {
             cpu.emulate_cycle(rip8);
         }
+
+        //let frame_time = frame_time.elapsed();
+        //println!("frame_time: {}", 1000.0 / frame_time.as_millis() as f64 );
 
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / fps));
     }

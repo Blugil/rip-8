@@ -11,15 +11,11 @@ pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
         .show(&egui_ctx, |ui| {
             ui.set_width(400.0);
             ui.label(" ");
-            ui.horizontal(|ui| {
-                ui.label("V[x]");
-                ui.label("        ");
-                ui.separator();
-                ui.label("stack");
-            });
-            ui.separator();
             ui.horizontal_centered(|ui| {
                 ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
+                    ui.set_width(ui.available_size()[0] / 2.0);
+                    ui.label("V[x]");
+                    ui.separator();
                     ui.label(format!(
                         "{}",
                         rip8.registers
@@ -29,9 +25,16 @@ pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
                             .collect::<Vec<String>>()
                             .join("\n")
                     ));
+                    ui.label(format!("PC: {:#04x}", rip8.pc));
+                    ui.label(format!("I: {:#04x}", rip8.i));
+                    ui.label(format!("DT: {:#04}", rip8.delay));
+                    ui.label(format!("ST: {:#04}", rip8.sound));
+                    ui.label(format!("SP: {:#04x}", rip8.sp));
                 });
                 ui.separator();
                 ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
+                    ui.label("stack");
+                    ui.separator();
                     ui.label(format!(
                         "{}",
                         rip8.stack
@@ -76,8 +79,8 @@ pub fn draw_game_window(
                         egui::Color32::from_rgb(14, 14, 14)
                     };
                     let rect = egui::Rect::from_min_size(
-                        egui::pos2(x as f32 * pixel_size, y as f32 * pixel_size),
-                        egui::vec2(pixel_size + 1.0, pixel_size + 1.0),
+                        ui.painter().round_pos_to_pixels(egui::pos2(x as f32 * pixel_size, y as f32 * pixel_size)),
+                        ui.painter().round_vec_to_pixels(egui::vec2(pixel_size, pixel_size)),
                     );
                     ui.painter().rect_filled(rect, 0.0, color);
                 }
