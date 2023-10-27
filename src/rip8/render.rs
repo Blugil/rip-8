@@ -1,42 +1,76 @@
-extern crate sdl2;
+//extern crate sdl2;
 
-use sdl2::event::Event;
+//use sdl2::event::Event;
+use egui_backend::egui::{FullOutput, Style};
+use egui_backend::sdl2::video::GLProfile;
+use egui_backend::{egui, sdl2};
+use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
+use std::time::Instant;
+use sdl2::video::SwapInterval;
+
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::ttf;
-use std::path::Path;
 use std::time::Duration;
+
+
+
+use egui_sdl2_gl as egui_backend;
+
 
 use super::cpu::Cpu;
 use super::rip8::Rip8;
 
-const PIXEL_SIZE: u32 = 30; // Size of each pixel in pixels
+const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
 
 
 pub fn create_window(rip8: &mut Rip8) {
-    // Initialize SDL
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
 
     // Calculate the window size based on the pixel size
-    let window_size = (SCREEN_WIDTH * PIXEL_SIZE, SCREEN_HEIGHT * PIXEL_SIZE + 200);
+    let window_size = (SCREEN_WIDTH * PIXEL_SIZE + 100, SCREEN_HEIGHT * PIXEL_SIZE + 100);
 
-    // Create the window and canvas
+    let clock_speed = 700;
+    let fps = 60;
+    let timer_interval = clock_speed / fps;
+
+    let mut quit = false;
+    
+    // Initialize SDL
+
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+    let gl_attr = video_subsystem.gl_attr();
+
+    gl_attr.set_context_profile(GLProfile::Core);
+    gl_attr.set_double_buffer(true);
+    gl_attr.set_multisample_samples(4);
+
     let window = video_subsystem
-        .window("rip8", window_size.0, window_size.1)
-        .position_centered()
+        .window(
+            "Demo: Egui backend for SDL2 + GL",
+            window_size.0,
+            window_size.1,
+        )
         .opengl()
+        .position_centered()
         .build()
         .unwrap();
 
     let mut canvas = window.into_canvas().build().unwrap();
 
-    let clock_speed = 700;
-    let fps = 60;
-    let timer_interval = clock_speed / 60;
+    let _ctx = canvas.window().gl_create_context().unwrap();
+    let shader_ver = ShaderVersion::Adaptive;
+
+    let (mut painter, mut egui_state) = egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(2.5));
+    let egui_ctx = egui::Context::default();
+
+
+    let start_time = Instant::now();
+
+
+    canvas.window().subsystem().gl_set_swap_interval(SwapInterval::Immediate).unwrap();
 
     let mut cpu = Cpu {
         clock_speed,
@@ -47,18 +81,76 @@ pub fn create_window(rip8: &mut Rip8) {
     };
 
 
-    //let texture = canvas.texture_creator();
-    //let ttf_context = ttf::init().map_err(|e| e.to_string()).expect("unable to initialize font");
-
-    //let font_path: &Path = Path::new(&"../../resources/fonts/standard-book-webfont.ttf");
-    //let mut font = ttf_context.load_font(font_path, 128);
-    
 
     canvas.set_draw_color(Color::RGB(0, 0, 0));
 
     // main loop
     'running: loop {
-        canvas.clear();
+
+
+        egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
+        egui_ctx.begin_frame(egui_state.input.take());
+
+        egui::CentralPanel::default()
+            .show(&egui_ctx, |ui| {
+            // Your Egui widgets here
+            egui::Frame::dark_canvas(&Style::default())
+                .fill(egui::Color32::BLACK)
+                .show(ui, |ui| {
+                for y in 0..SCREEN_HEIGHT {
+                    for x in 0..SCREEN_WIDTH {
+                        let color = if rip8.display[y as usize][x as usize] {
+                            egui::Color32::from_rgb(140,89,77)
+                        } else {
+                            egui::Color32::from_rgb(14,14,14)
+                        };
+
+                        let rect = egui::Rect::from_min_max(
+                            egui::pos2((x * PIXEL_SIZE) as f32, (y * PIXEL_SIZE) as f32),
+                            egui::pos2(((x + 1) * PIXEL_SIZE) as f32, ((y + 1) * PIXEL_SIZE) as f32),
+                        );
+
+                        ui.painter().rect_filled(rect, 0.0, color);
+                    }
+                }
+            });
+        });
+
+
+        egui::SidePanel::right("right panel")
+            .resizable(false)
+            .max_width(200.0)
+            .show(&egui_ctx, |ui| {
+                ui.label(" ");
+                ui.label(format!("v0: {} \nv1: {}", rip8.registers[0x0], rip8.registers[0x1]));
+                ui.separator();
+                if ui.button("Quit?").clicked() {
+                    quit = true;
+                }
+            }
+        );
+
+        egui::TopBottomPanel::bottom("bottom panel")
+            .exact_height(200.0)
+            .show(&egui_ctx, |ui| {
+                ui.label("Bottom panel");
+            }
+        );
+
+
+
+
+        let FullOutput {
+            platform_output,
+            repaint_after: _,
+            textures_delta,
+            shapes,
+        } = egui_ctx.end_frame();
+
+        egui_state.process_output(&canvas.window(), &platform_output);
+
+        let paint_jobs = egui_ctx.tessellate(shapes);
+
         // Handle events
         for event in sdl_context.event_pump().unwrap().poll_iter() {
             match event {
@@ -284,38 +376,55 @@ pub fn create_window(rip8: &mut Rip8) {
                 } => {
                     break 'running;
                 }
-                // handles every other arm of the branch
-                _ => {}
+                Event::Quit { .. } => break 'running,
+                _ => {
+                    // Process input event
+                    egui_state.process_input(&canvas.window(), event, &mut painter);
+                }
             }
         }
+        canvas.clear();
 
         // redraw the screen
-        for x in 0..SCREEN_WIDTH {
-            for y in 0..SCREEN_HEIGHT {
-                let pixel_rect = Rect::new(
-                    x as i32 * PIXEL_SIZE as i32,
-                    y as i32 * PIXEL_SIZE as i32,
-                    PIXEL_SIZE,
-                    PIXEL_SIZE,
-                );
-                if rip8.display[y as usize][x as usize] {
-                    // draws a white "pixel" to the screen as a representation of the byte value in
-                    // the dsplay array
-                    canvas.set_draw_color(Color::RGB(140, 89, 77));
-                    canvas.fill_rect(pixel_rect).unwrap();
-                } else {
-                    canvas.set_draw_color(Color::RGB(14, 14, 14));
-                    canvas.fill_rect(pixel_rect).unwrap();
-                }
-                canvas.set_draw_color(Color::RGB(0, 0, 0));
-            }
-        }
+        //for x in 0..SCREEN_WIDTH {
+        //    for y in 0..SCREEN_HEIGHT {
+        //        let pixel_rect = Rect::new(
+        //            x as i32 * PIXEL_SIZE as i32,
+        //            y as i32 * PIXEL_SIZE as i32,
+        //            PIXEL_SIZE,
+        //            PIXEL_SIZE,
+        //        );
+        //        if rip8.display[y as usize][x as usize] {
+        //            // draws a white "pixel" to the screen as a representation of the byte value in
+        //            // the dsplay array
+        //            canvas.set_draw_color(Color::RGB(140, 89, 77));
+        //            canvas.fill_rect(pixel_rect).unwrap();
+        //        } else {
+        //            canvas.set_draw_color(Color::RGB(14, 14, 14));
+        //            canvas.fill_rect(pixel_rect).unwrap();
+        //        }
+        //        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        //    }
+        //}
 
-        // Present the canvas to the window
+
         // render the window at 60fps but keep the cpu at a normal clock
-        canvas.present();
+        // Present the canvas to the window
+        
+        painter.paint_jobs(None, textures_delta, paint_jobs);
+
+        canvas.window().gl_swap_window();
+
+        //canvas.present();
+
+
         for _ in 0..timer_interval {
             cpu.emulate_cycle(rip8);
+        }
+
+        // quites on the button press
+        if quit {
+            break;
         }
 
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / fps));
