@@ -116,8 +116,9 @@ impl Cpu {
                     }
                     0x0006 => {
                         // order of this matters because vx might be vF
-                        rip8.registers[reg_x_index as usize] = reg_x_value >> 1;
-                        rip8.registers[0xF as usize] = reg_x_value & 0x1;
+                        // vy shl vx is a quirk
+                        rip8.registers[reg_x_index as usize] = reg_y_value >> 1;
+                        rip8.registers[0xF as usize] = reg_y_value & 0x1;
                     }
                     0x0007 => {
                         let (output, overflow) = reg_y_value.overflowing_sub(reg_x_value);
@@ -125,8 +126,9 @@ impl Cpu {
                         rip8.registers[0xF as usize] = !overflow as u8;
                     }
                     0x000E => {
-                        rip8.registers[reg_x_index as usize] = reg_x_value << 1;
-                        rip8.registers[0xF as usize] = reg_x_value >> 7;
+                        // vy shl vx is a quirk
+                        rip8.registers[reg_x_index as usize] = reg_y_value << 1;
+                        rip8.registers[0xF as usize] = reg_y_value >> 7;
                     }
                     _ => panic!("unknown upcode"),
                 }
