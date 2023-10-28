@@ -6,6 +6,13 @@ use egui_sdl2_gl as egui_backend;
 use super::rip8::Rip8;
 
 pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
+    let opcode = u16::from(rip8.buffer.get(usize::from(rip8.pc)).unwrap().to_owned()) << 8
+        | u16::from(
+            rip8.buffer
+                .get(usize::from(rip8.pc + 1))
+                .unwrap()
+                .to_owned(),
+        );
     egui::SidePanel::right("right panel")
         .resizable(false)
         .show(&egui_ctx, |ui| {
@@ -31,7 +38,7 @@ pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
                     ui.label(format!("ST: {:#04}", rip8.sound));
                     ui.label(format!("SP: {:#04x}", rip8.sp));
                     ui.label(" ");
-                    ui.label("OP: ");
+                    ui.label(format!("OP: {:#04x}", opcode));
                 });
                 ui.separator();
                 ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {

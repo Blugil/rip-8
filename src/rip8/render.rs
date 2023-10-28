@@ -22,7 +22,7 @@ use super::rip8::Rip8;
 //const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
 const EMULATOR_WIDTH: u32 = 64;
 const EMULATOR_HEIGHT: u32 = 32;
-const FPS: u32 = 60;
+const TARGET_FPS: u32 = 60;
 const CLOCK_SPEED: u32 = 1000;
 
 const DPI: u32 = 2;
@@ -31,8 +31,8 @@ pub fn create_window(rip8: &mut Rip8) {
     // Calculate the window size based on the pixel size
     let window_size = (1000 * DPI, 600 * DPI);
 
-    let timer_interval = CLOCK_SPEED / FPS;
-    let thread_sleep = 1_000_000_000u32 / FPS;
+    let timer_interval = CLOCK_SPEED / TARGET_FPS;
+    let thread_sleep = 1_000_000_000u32 / TARGET_FPS;
 
     // Initialize SDL
     let sdl_context = sdl2::init().unwrap();
@@ -54,6 +54,7 @@ pub fn create_window(rip8: &mut Rip8) {
         .position_centered()
         .build()
         .unwrap();
+
     let mut canvas = window.into_canvas().build().unwrap();
 
     let _ctx = canvas.window().gl_create_context().unwrap();
@@ -63,7 +64,11 @@ pub fn create_window(rip8: &mut Rip8) {
     let egui_ctx = egui::Context::default();
 
     let mut style = (*egui_ctx.style()).clone();
-    style.text_styles = [(TextStyle::Body, FontId::new(16.0 * DPI as f32, FontFamily::Monospace))].into();
+    style.text_styles = [(
+        TextStyle::Body,
+        FontId::new(16.0 * DPI as f32, FontFamily::Monospace),
+    )]
+    .into();
     egui_ctx.set_style(style);
 
     let start_time = Instant::now();
@@ -73,7 +78,7 @@ pub fn create_window(rip8: &mut Rip8) {
     let mut num_frames = 0;
     let mut frame_rate_sampled: f32 = 0.0;
 
-    let mut paused = false;
+    let mut paused = true;
 
     canvas
         .window()
@@ -115,17 +120,9 @@ pub fn create_window(rip8: &mut Rip8) {
         for event in sdl_context.event_pump().unwrap().poll_iter() {
             match event {
                 Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
-                    break 'running;
-                }
-                Event::KeyDown {
                     keycode: Some(Keycode::P),
                     ..
-                } => {
-                    paused = !paused;
-                }
+                } => paused = !paused,
                 Event::KeyDown {
                     keycode: Some(Keycode::O),
                     ..
@@ -134,6 +131,10 @@ pub fn create_window(rip8: &mut Rip8) {
                         cpu.emulate_cycle(rip8);
                     }
                 }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => break 'running,
                 _ => {
                     // Process input event
                     handle_key_event(rip8, event.clone());

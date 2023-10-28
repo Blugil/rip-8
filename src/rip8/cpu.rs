@@ -29,28 +29,27 @@ impl Cpu {
             //load index register with immediate value
             0x0000 => {
                 // matches the 0x00EE and 0x000E opcodes
-                match opcode & 0x000F {
-                    0x0000 => {
+                match opcode & 0x00FF {
+                    0x00E0 => {
                         //clear the screen
                         rip8.clear();
-                        rip8.pc += 2;
                     }
-                    0x000E => {
+                    0x00EE => {
                         //return from subroutine
-                        rip8.pc = rip8.stack[rip8.sp as usize] + 2;
+                        rip8.pc = rip8.stack[rip8.sp as usize];
                         rip8.sp -= 1;
                     }
                     _ => panic!("unknown opcode: {:#04x}", opcode),
                 }
+                rip8.pc += 2;
             }
             //doesn't increment pc
             0x1000 => rip8.pc = opcode & 0x0FFF,
             //doesn't increment pc
             0x2000 => {
-                let address: u16 = opcode & 0x0FFF;
                 rip8.sp += 1;
                 rip8.stack[rip8.sp as usize] = rip8.pc;
-                rip8.pc = address;
+                rip8.pc = opcode & 0x0FFF;
             }
             0x3000 => {
                 let value = opcode & 0x00FF;
@@ -77,28 +76,36 @@ impl Cpu {
                 rip8.pc += 2;
             }
             0x6000 => {
-                rip8.registers[usize::from(reg_x_index)] = (opcode & 0x00FF) as u8;
+                rip8.registers[reg_x_index as usize] = (opcode & 0x00FF) as u8;
                 rip8.pc += 2;
             }
             0x7000 => {
                 let value = opcode & 0x00FF;
-                rip8.registers[usize::from(reg_x_index)] = reg_x_value.wrapping_add(value as u8);
+                rip8.registers[reg_x_index as usize] = reg_x_value.wrapping_add(value as u8);
                 rip8.pc += 2;
             }
             0x8000 => {
                 // all increment PC by 2
                 match opcode & 0x000F {
-                    0x0000 => rip8.registers[usize::from(reg_x_index)] = reg_y_value,
-                    0x0001 => rip8.registers[usize::from(reg_x_index)] = reg_x_value | reg_y_value,
-                    0x0002 => rip8.registers[usize::from(reg_x_index)] = reg_x_value & reg_y_value,
-                    0x0003 => rip8.registers[usize::from(reg_x_index)] = reg_x_value ^ reg_y_value,
+                    0x0000 => rip8.registers[reg_x_index as usize] = reg_y_value,
+                    0x0001 => {
+                        rip8.registers[reg_x_index as usize] = reg_x_value | reg_y_value;
+                        rip8.registers[0xF] = 0;
+                    }
+                    0x0002 => {
+                        rip8.registers[reg_x_index as usize] = reg_x_value & reg_y_value;
+                        rip8.registers[0xF] = 0;
+                    }
+                    0x0003 => {
+                        rip8.registers[reg_x_index as usize] = reg_x_value ^ reg_y_value;
+                        rip8.registers[0xF] = 0;
+                    }
                     0x0004 => {
                         //
                         //checks to see if the
-                        let output: u16 = reg_x_value as u16 + reg_y_value as u16;
-                        //some bit math to store the carry of an aaddition in Vf
-                        rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
-                        rip8.registers[0xF as usize] = ((output >> 8) & 0x01) as u8;
+                        let (output, overflow) = reg_x_value.overflowing_add(reg_y_value);
+                        rip8.registers[reg_x_index as usize] = (output & 0xFF) as u8;
+                        rip8.registers[0xF as usize] = overflow as u8;
                     }
                     //maybe wrong implementation of negatives?
                     0x0005 => {
@@ -108,7 +115,7 @@ impl Cpu {
                         rip8.registers[0xF as usize] = !overflow as u8;
                     }
                     0x0006 => {
-                        // order of this matters because 
+                        // order of this matters because vx might be vF
                         rip8.registers[reg_x_index as usize] = reg_x_value >> 1;
                         rip8.registers[0xF as usize] = reg_x_value & 0x1;
                     }
@@ -139,12 +146,11 @@ impl Cpu {
             0xB000 => {
                 let value = opcode & 0x0FFF;
                 rip8.pc = value + rip8.registers[0x0] as u16;
-                rip8.pc += 2;
             }
             0xC000 => {
                 let value = (opcode & 0x00FF) as u8;
                 let rng: u8 = rand::thread_rng().gen_range(0..=255);
-                rip8.registers[usize::from(reg_x_index)] = rng & value;
+                rip8.registers[reg_x_index as usize] = rng & value;
                 rip8.pc += 2;
             }
             //load register with immediate value
@@ -152,25 +158,35 @@ impl Cpu {
             0xD000 => {
                 rip8.registers[0xF as usize] = 0;
 
-                let n = (opcode & 0x000F) as u8;
+                let nibble = (opcode & 0x000F) as u8;
                 let mut collision: bool = false;
-                for mem_offset in 0..n {
+
+                let mut x_wrap: usize;
+                let mut y_wrap: usize;
+
+                for mem_offset in 0..nibble {
                     //integer value for sprite byte stored in memory
-                    let sprite = rip8.buffer[(rip8.i + mem_offset as u16) as usize];
+                    let sprite = rip8.buffer[(rip8.i + mem_offset as u16) as usize].reverse_bits();
                     for sprite_offset in 0..8 {
                         //if any pixel causes a collision set collision to true
-                        if (sprite >> sprite_offset) & 1 == 1 {
-                            let mut x_wrap: usize = (reg_x_value + 7 - sprite_offset) as usize;
-                            let mut y_wrap: usize = (reg_y_value + mem_offset) as usize;
-                            if x_wrap >= 64 {
+                        //if statement saves unnecessary modulus calls
+                        if (sprite >> sprite_offset) & 0x1 == 1 {
+
+                            x_wrap = (reg_x_value + sprite_offset) as usize;
+                            y_wrap = (reg_y_value + mem_offset) as usize;
+
+                            if x_wrap > 63 {
                                 x_wrap = (x_wrap % 64).try_into().unwrap();
                             }
-                            if y_wrap >= 32 {
+                            if y_wrap > 31 {
                                 y_wrap = (y_wrap % 32).try_into().unwrap();
                             }
-                            // swaps the bit at the correct coordinate
+
+                            // xor's the bit
                             collision = rip8.display[y_wrap][x_wrap] | collision;
-                            rip8.display[y_wrap][x_wrap] = !rip8.display[y_wrap][x_wrap];
+                            // true because it's the same condition in the if
+                            rip8.display[y_wrap][x_wrap] = true ^ rip8.display[y_wrap][x_wrap];
+
                         }
                     }
                 }
@@ -201,7 +217,6 @@ impl Cpu {
                 // all increment PC by 2
                 match opcode & 0x00FF {
                     0x0007 => {
-                        //TODO
                         rip8.registers[reg_x_index as usize] = rip8.delay;
                     }
                     0x000A => {
@@ -210,22 +225,18 @@ impl Cpu {
                         if !self.halted {
                             self.halted = true;
                             rip8.keypress = 0xFF;
-                            for i in 0..rip8.keydown.len() {
-                                rip8.keydown[i] = false
-                            }
                         }
                         if rip8.keypress == 0xFF {
                             rip8.pc -= 2;
                         } else {
-                            rip8.registers[reg_x_index as usize] = rip8.keypress as u8;
+                            rip8.registers[reg_x_index as usize] = (rip8.keypress & 0xF) as u8;
                             self.halted = false;
-                            rip8.keypress = 0xFF;
                         }
                     }
                     0x0015 => rip8.delay = reg_x_value,
                     0x0018 => rip8.sound = reg_x_value,
                     0x001E => rip8.i += reg_x_value as u16,
-                    0x0029 => rip8.i = (0x50 + (reg_x_value * 5)) as u16,
+                    0x0029 => rip8.i = (0x50 + ((reg_x_value & 0xF) * 5)) as u16,
                     0x0033 => {
                         // really crude implementation without using the shift-add-three algo that
                         // i will implement in the future (section borrowed from
@@ -260,6 +271,7 @@ impl Cpu {
         }
 
         if rip8.delay > 0 {
+            self.delay_state += 1;
             if self.delay_state as u32 == self.timer_interval {
                 rip8.delay -= 1;
                 self.delay_state = 0;
@@ -267,6 +279,7 @@ impl Cpu {
         }
 
         if rip8.sound > 0 {
+            self.sound_state += 1;
             if self.sound_state as u32 == self.timer_interval {
                 rip8.sound -= 1;
                 self.sound_state = 0;
