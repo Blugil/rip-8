@@ -44,10 +44,7 @@ impl Cpu {
                 }
             }
             //doesn't increment pc
-            0x1000 => {
-                let address = opcode & 0x0FFF;
-                rip8.pc = address;
-            }
+            0x1000 => rip8.pc = opcode & 0x0FFF,
             //doesn't increment pc
             0x2000 => {
                 let address: u16 = opcode & 0x0FFF;
@@ -80,8 +77,7 @@ impl Cpu {
                 rip8.pc += 2;
             }
             0x6000 => {
-                let value = opcode & 0x00FF;
-                rip8.registers[usize::from(reg_x_index)] = value as u8;
+                rip8.registers[usize::from(reg_x_index)] = (opcode & 0x00FF) as u8;
                 rip8.pc += 2;
             }
             0x7000 => {
@@ -108,23 +104,22 @@ impl Cpu {
                     0x0005 => {
                         //skip next instruction if the values are the same in Vx and Vy
                         let (output, overflow) = reg_x_value.overflowing_sub(reg_y_value);
-                        rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
+                        rip8.registers[reg_x_index as usize] = (output & 0xFF) as u8;
                         rip8.registers[0xF as usize] = !overflow as u8;
                     }
                     0x0006 => {
-                        // order of this matters ?? for the 4-test rom
-                        rip8.registers[usize::from(reg_x_index)] = reg_x_value >> 1;
+                        // order of this matters because 
+                        rip8.registers[reg_x_index as usize] = reg_x_value >> 1;
                         rip8.registers[0xF as usize] = reg_x_value & 0x1;
                     }
                     0x0007 => {
                         let (output, overflow) = reg_y_value.overflowing_sub(reg_x_value);
-                        rip8.registers[usize::from(reg_x_index)] = (output & 0xFF) as u8;
+                        rip8.registers[reg_x_index as usize] = (output & 0xFF) as u8;
                         rip8.registers[0xF as usize] = !overflow as u8;
                     }
                     0x000E => {
-                        let (output, overflow) = reg_x_value.overflowing_mul(2);
-                        rip8.registers[usize::from(reg_x_index)] = output;
-                        rip8.registers[0xF as usize] = overflow as u8;
+                        rip8.registers[reg_x_index as usize] = reg_x_value << 1;
+                        rip8.registers[0xF as usize] = reg_x_value >> 7;
                     }
                     _ => panic!("unknown upcode"),
                 }
@@ -188,12 +183,12 @@ impl Cpu {
                 //TODO
                 match opcode & 0x00FF {
                     0x009E => {
-                        if rip8.keydown[reg_x_value as usize] {
+                        if rip8.keydown[(reg_x_value & 0xF) as usize] {
                             rip8.pc += 2;
                         }
                     }
                     0x00A1 => {
-                        if !(rip8.keydown[reg_x_value as usize]) {
+                        if !(rip8.keydown[(reg_x_value & 0xF) as usize]) {
                             rip8.pc += 2;
                         }
                     }

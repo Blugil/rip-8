@@ -20,14 +20,16 @@ use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
 //const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
-const SCREEN_WIDTH: u32 = 64;
-const SCREEN_HEIGHT: u32 = 32;
+const EMULATOR_WIDTH: u32 = 64;
+const EMULATOR_HEIGHT: u32 = 32;
 const FPS: u32 = 60;
 const CLOCK_SPEED: u32 = 1000;
 
+const DPI: u32 = 2;
+
 pub fn create_window(rip8: &mut Rip8) {
     // Calculate the window size based on the pixel size
-    let window_size = (2000, 1200);
+    let window_size = (1000 * DPI, 600 * DPI);
 
     let timer_interval = CLOCK_SPEED / FPS;
     let thread_sleep = 1_000_000_000u32 / FPS;
@@ -57,11 +59,11 @@ pub fn create_window(rip8: &mut Rip8) {
     let _ctx = canvas.window().gl_create_context().unwrap();
     let shader_ver = ShaderVersion::Adaptive;
     let (mut painter, mut egui_state) =
-        egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(4.0));
+        egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(DPI as f32));
     let egui_ctx = egui::Context::default();
 
     let mut style = (*egui_ctx.style()).clone();
-    style.text_styles = [(TextStyle::Body, FontId::new(22.0, FontFamily::Monospace))].into();
+    style.text_styles = [(TextStyle::Body, FontId::new(16.0 * DPI as f32, FontFamily::Monospace))].into();
     egui_ctx.set_style(style);
 
     let start_time = Instant::now();
@@ -96,7 +98,7 @@ pub fn create_window(rip8: &mut Rip8) {
 
         draw_side_panel(rip8, &egui_ctx);
         draw_bottom_panel(&egui_ctx, frame_rate_sampled);
-        draw_game_window(rip8, &egui_ctx, SCREEN_HEIGHT, SCREEN_WIDTH);
+        draw_game_window(rip8, &egui_ctx, EMULATOR_HEIGHT, EMULATOR_WIDTH);
 
         let FullOutput {
             platform_output,

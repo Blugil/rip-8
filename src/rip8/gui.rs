@@ -26,10 +26,12 @@ pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
                             .join("\n")
                     ));
                     ui.label(format!("PC: {:#04x}", rip8.pc));
-                    ui.label(format!("I: {:#04x}", rip8.i));
+                    ui.label(format!(" I: {:#04x}", rip8.i));
                     ui.label(format!("DT: {:#04}", rip8.delay));
                     ui.label(format!("ST: {:#04}", rip8.sound));
                     ui.label(format!("SP: {:#04x}", rip8.sp));
+                    ui.label(" ");
+                    ui.label("OP: ");
                 });
                 ui.separator();
                 ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
@@ -50,7 +52,7 @@ pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
 
 pub fn draw_bottom_panel(egui_ctx: &egui::Context, frame_rate: f32) {
     egui::TopBottomPanel::bottom("bottom panel").show(&egui_ctx, |ui| {
-        ui.set_height(350.0);
+        ui.set_height(500.0);
         ui.label(" ");
         ui.label(format!("Current framerate: {}", frame_rate));
         ui.label(" ");
@@ -82,13 +84,15 @@ pub fn draw_game_window(
                     } else {
                         egui::Color32::from_rgb(14, 14, 14)
                     };
-                    let rect = egui::Rect::from_min_size(
+                    let rect = egui::Rect::from_min_max(
                         ui.painter().round_pos_to_pixels(egui::pos2(
                             x as f32 * pixel_size,
                             y as f32 * pixel_size,
                         )),
-                        ui.painter()
-                            .round_vec_to_pixels(egui::vec2(pixel_size, pixel_size)),
+                        ui.painter().round_pos_to_pixels(egui::pos2(
+                            (x + 1) as f32 * pixel_size,
+                            (y + 1) as f32 * pixel_size,
+                        )),
                     );
                     ui.painter().rect_filled(rect, 0.0, color);
                 }
