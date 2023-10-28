@@ -1,7 +1,7 @@
 //extern crate sdl2;
 
 //use sdl2::event::Event;
-use egui_backend::egui::{FullOutput, FontFamily, TextStyle, FontId};
+use egui_backend::egui::{FontFamily, FontId, FullOutput, TextStyle};
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
@@ -60,15 +60,9 @@ pub fn create_window(rip8: &mut Rip8) {
         egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(4.0));
     let egui_ctx = egui::Context::default();
 
-
     let mut style = (*egui_ctx.style()).clone();
-    style.text_styles = [
-        (TextStyle::Body, FontId::new(22.0, FontFamily::Monospace)),
-    ]
-    .into();
+    style.text_styles = [(TextStyle::Body, FontId::new(22.0, FontFamily::Monospace))].into();
     egui_ctx.set_style(style);
-
-
 
     let start_time = Instant::now();
 
@@ -95,7 +89,6 @@ pub fn create_window(rip8: &mut Rip8) {
 
     // main loop
     'running: loop {
-
         let frame_time = Instant::now();
 
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());

@@ -83,8 +83,12 @@ pub fn draw_game_window(
                         egui::Color32::from_rgb(14, 14, 14)
                     };
                     let rect = egui::Rect::from_min_size(
-                        ui.painter().round_pos_to_pixels(egui::pos2(x as f32 * pixel_size, y as f32 * pixel_size)),
-                        ui.painter().round_vec_to_pixels(egui::vec2(pixel_size, pixel_size)),
+                        ui.painter().round_pos_to_pixels(egui::pos2(
+                            x as f32 * pixel_size,
+                            y as f32 * pixel_size,
+                        )),
+                        ui.painter()
+                            .round_vec_to_pixels(egui::vec2(pixel_size, pixel_size)),
                     );
                     ui.painter().rect_filled(rect, 0.0, color);
                 }
