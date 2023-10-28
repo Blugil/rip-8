@@ -161,8 +161,16 @@ impl Cpu {
                 let nibble = (opcode & 0x000F) as u8;
                 let mut collision: bool = false;
 
-                let mut x_wrap: usize;
-                let mut y_wrap: usize;
+                let mut x_wrap: u8 = reg_x_value;
+                let mut y_wrap: u8 = reg_y_value;
+
+                // clipping quirk handled here
+                if x_wrap > 63 {
+                    x_wrap = (x_wrap % 64).try_into().unwrap();
+                }
+                if y_wrap > 31 {
+                    y_wrap = (y_wrap % 32).try_into().unwrap();
+                }
 
                 for mem_offset in 0..nibble {
                     //integer value for sprite byte stored in memory
@@ -172,21 +180,24 @@ impl Cpu {
                         //if statement saves unnecessary modulus calls
                         if (sprite >> sprite_offset) & 0x1 == 1 {
 
-                            x_wrap = (reg_x_value + sprite_offset) as usize;
-                            y_wrap = (reg_y_value + mem_offset) as usize;
+                            let mut x = (x_wrap + sprite_offset) as usize;
+                            let mut y = (y_wrap + mem_offset) as usize;
 
-                            if x_wrap > 63 {
-                                x_wrap = (x_wrap % 64).try_into().unwrap();
+                            // remove when not clipping
+                            if x > 63 {
+                                break;
                             }
-                            if y_wrap > 31 {
-                                y_wrap = (y_wrap % 32).try_into().unwrap();
+                            if y > 31 {
+                                break;
                             }
+
+                            x = (x % 64).try_into().unwrap();
+                            y = (y % 32).try_into().unwrap();
 
                             // xor's the bit
-                            collision = rip8.display[y_wrap][x_wrap] | collision;
+                            collision = rip8.display[y][x] | collision;
                             // true because it's the same condition in the if
-                            rip8.display[y_wrap][x_wrap] = true ^ rip8.display[y_wrap][x_wrap];
-
+                            rip8.display[y][x] = true ^ rip8.display[y][x];
                         }
                     }
                 }
