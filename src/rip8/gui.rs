@@ -33,7 +33,7 @@ pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
                 });
                 ui.separator();
                 ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
-                    ui.label("stack");
+                    ui.label("Stack");
                     ui.separator();
                     ui.label(format!(
                         "{}",
@@ -48,11 +48,15 @@ pub fn draw_side_panel(rip8: &Rip8, egui_ctx: &egui::Context) {
         });
 }
 
-pub fn draw_bottom_panel(egui_ctx: &egui::Context) {
+pub fn draw_bottom_panel(egui_ctx: &egui::Context, frame_rate: f32) {
     egui::TopBottomPanel::bottom("bottom panel").show(&egui_ctx, |ui| {
         ui.set_height(350.0);
-        ui.label("Bottom panel");
-        ui.available_size();
+        ui.label(" ");
+        ui.label(format!("Current framerate: {}", frame_rate));
+        ui.label(" ");
+        ui.label("Press P to pause/resume the program");
+        ui.label(" ");
+        ui.label("Press O to step through instructions one by one\nOnly works when paused");
     });
 }
 

@@ -22,17 +22,17 @@ use super::rip8::Rip8;
 //const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
 const SCREEN_WIDTH: u32 = 64;
 const SCREEN_HEIGHT: u32 = 32;
+const FPS: u32 = 60;
+const CLOCK_SPEED: u32 = 1000;
 
 pub fn create_window(rip8: &mut Rip8) {
     // Calculate the window size based on the pixel size
     let window_size = (1800, 1200);
 
-    let clock_speed = 1000;
-    let fps = 60;
-    let timer_interval = clock_speed / fps;
+    let timer_interval = CLOCK_SPEED / FPS;
+    let thread_sleep = 1_000_000_000u32 / FPS;
 
     // Initialize SDL
-
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let gl_attr = video_subsystem.gl_attr();
@@ -41,6 +41,7 @@ pub fn create_window(rip8: &mut Rip8) {
     gl_attr.set_double_buffer(true);
     gl_attr.set_multisample_samples(4);
 
+    // setting up the window
     let window = video_subsystem
         .window(
             "Demo: Egui backend for SDL2 + GL",
@@ -61,6 +62,13 @@ pub fn create_window(rip8: &mut Rip8) {
 
     let start_time = Instant::now();
 
+    // debug related
+    let mut total_time_millis = 0;
+    let mut num_frames = 0;
+    let mut frame_rate_sampled: f32 = 0.0;
+
+    let mut paused = false;
+
     canvas
         .window()
         .subsystem()
@@ -68,7 +76,7 @@ pub fn create_window(rip8: &mut Rip8) {
         .unwrap();
 
     let mut cpu = Cpu {
-        clock_speed,
+        clock_speed: CLOCK_SPEED,
         timer_interval,
         delay_state: 0,
         sound_state: 0,
@@ -78,13 +86,13 @@ pub fn create_window(rip8: &mut Rip8) {
     // main loop
     'running: loop {
 
-        //let frame_time = Instant::now();
+        let frame_time = Instant::now();
 
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
         draw_side_panel(rip8, &egui_ctx);
-        draw_bottom_panel(&egui_ctx);
+        draw_bottom_panel(&egui_ctx, frame_rate_sampled);
         draw_game_window(rip8, &egui_ctx, SCREEN_HEIGHT, SCREEN_WIDTH);
 
         let FullOutput {
@@ -107,6 +115,20 @@ pub fn create_window(rip8: &mut Rip8) {
                 } => {
                     break 'running;
                 }
+                Event::KeyDown {
+                    keycode: Some(Keycode::P),
+                    ..
+                } => {
+                    paused = !paused;
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::O),
+                    ..
+                } => {
+                    if paused {
+                        cpu.emulate_cycle(rip8);
+                    }
+                }
                 _ => {
                     // Process input event
                     handle_key_event(rip8, event.clone());
@@ -120,13 +142,22 @@ pub fn create_window(rip8: &mut Rip8) {
         painter.paint_jobs(None, textures_delta, paint_jobs);
         canvas.window().gl_swap_window();
 
-        for _ in 0..timer_interval {
-            cpu.emulate_cycle(rip8);
+        if !paused {
+            for _ in 0..timer_interval {
+                cpu.emulate_cycle(rip8);
+            }
         }
 
-        //let frame_time = frame_time.elapsed();
-        //println!("frame_time: {}", 1000.0 / frame_time.as_millis() as f64 );
+        if num_frames == 30 {
+            frame_rate_sampled = 1.0 / ((total_time_millis as f32 / 30.0) * 0.001);
+            total_time_millis = 0;
+            num_frames = 0;
+            continue 'running;
+        }
 
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / fps));
+        total_time_millis += frame_time.elapsed().as_millis();
+        num_frames += 1;
+
+        std::thread::sleep(Duration::new(0, thread_sleep));
     }
 }

@@ -84,26 +84,7 @@ impl Rip8 {
 
         //print the first opcode of the program
     }
-
     // needs to report collision
-    pub fn invert_pixel(&mut self, x: usize, y: usize) -> bool {
-        //swap pixel values
-
-        // handles index wrapping
-        let mut x_wrap: usize = x;
-        let mut y_wrap: usize = y;
-        if x >= 64 {
-            x_wrap = (x % 64).try_into().unwrap();
-        }
-        if y >= 32 {
-            y_wrap = (y % 32).try_into().unwrap();
-        }
-        // swaps the bit at the correct coordinate
-        let collision: bool = self.display[y_wrap][x_wrap];
-        self.display[y_wrap][x_wrap] = !self.display[y_wrap][x_wrap];
-
-        return collision;
-    }
 
     pub fn clear(&mut self) {
         for i in 0..SCREEN_WIDTH {

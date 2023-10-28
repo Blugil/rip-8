@@ -157,6 +157,9 @@ impl Cpu {
             //load register with immediate value
             //draw sprite to screen
             0xD000 => {
+
+                rip8.registers[0xF as usize] = 0;
+
                 let n = (opcode & 0x000F) as u8;
                 let mut collision: bool = false;
                 for mem_offset in 0..n {
@@ -165,19 +168,21 @@ impl Cpu {
                     for sprite_offset in 0..8 {
                         //if any pixel causes a collision set collision to true
                         if (sprite >> sprite_offset) & 1 == 1 {
-                            collision = rip8.invert_pixel(
-                                (reg_x_value + 7 - sprite_offset) as usize,
-                                (reg_y_value + mem_offset) as usize,
-                            ) | collision;
+                            let mut x_wrap: usize = (reg_x_value + 7 - sprite_offset) as usize;
+                            let mut y_wrap: usize = (reg_y_value + mem_offset) as usize;
+                            if x_wrap >= 64 {
+                                x_wrap = (x_wrap % 64).try_into().unwrap();
+                            }
+                            if y_wrap >= 32 {
+                                y_wrap = (y_wrap % 32).try_into().unwrap();
+                            }
+                            // swaps the bit at the correct coordinate
+                            collision = rip8.display[y_wrap][x_wrap] | collision;
+                            rip8.display[y_wrap][x_wrap] = !rip8.display[y_wrap][x_wrap];
                         }
                     }
                 }
-
-                //println!("opcode: {:#04x}", opcode);
-                //println!("trying to draw sprite at: {}, {} with a nibble of: {}", reg_x_value, reg_y_value, n);
-
                 rip8.registers[0xF as usize] = collision as u8;
-
                 rip8.pc += 2;
             }
             //keyboard related opcodes
