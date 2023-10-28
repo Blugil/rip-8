@@ -1,7 +1,7 @@
 //extern crate sdl2;
 
 //use sdl2::event::Event;
-use egui_backend::egui::FullOutput;
+use egui_backend::egui::{FullOutput, FontFamily, TextStyle, FontId};
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
@@ -27,7 +27,7 @@ const CLOCK_SPEED: u32 = 1000;
 
 pub fn create_window(rip8: &mut Rip8) {
     // Calculate the window size based on the pixel size
-    let window_size = (1800, 1200);
+    let window_size = (2000, 1200);
 
     let timer_interval = CLOCK_SPEED / FPS;
     let thread_sleep = 1_000_000_000u32 / FPS;
@@ -59,6 +59,16 @@ pub fn create_window(rip8: &mut Rip8) {
     let (mut painter, mut egui_state) =
         egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(4.0));
     let egui_ctx = egui::Context::default();
+
+
+    let mut style = (*egui_ctx.style()).clone();
+    style.text_styles = [
+        (TextStyle::Body, FontId::new(22.0, FontFamily::Monospace)),
+    ]
+    .into();
+    egui_ctx.set_style(style);
+
+
 
     let start_time = Instant::now();
 
@@ -148,8 +158,8 @@ pub fn create_window(rip8: &mut Rip8) {
             }
         }
 
-        if num_frames == 30 {
-            frame_rate_sampled = 1.0 / ((total_time_millis as f32 / 30.0) * 0.001);
+        if num_frames == 60 {
+            frame_rate_sampled = 1.0 / ((total_time_millis as f32 / 60.0) * 0.001);
             total_time_millis = 0;
             num_frames = 0;
             continue 'running;

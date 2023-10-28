@@ -20,8 +20,6 @@ impl Cpu {
                     .to_owned(),
             );
 
-        //println!("opcode: {:#04x}", opcode);
-
         let reg_x_index = (opcode & 0x0F00) >> 8;
         let reg_y_index = (opcode & 0x00F0) >> 4;
         let reg_x_value = rip8.registers[usize::from(reg_x_index)];
@@ -157,7 +155,6 @@ impl Cpu {
             //load register with immediate value
             //draw sprite to screen
             0xD000 => {
-
                 rip8.registers[0xF as usize] = 0;
 
                 let n = (opcode & 0x000F) as u8;
