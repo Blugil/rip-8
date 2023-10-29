@@ -36,7 +36,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     let window_size = (EMULATOR_WIDTH * 20 * DPI, EMULATOR_HEIGHT * 20 * DPI);
 
     let timer_interval = CLOCK_SPEED / TARGET_FPS;
-    let thread_sleep = 1_000_000_000u32 / TARGET_FPS;
+    //let thread_sleep = 1_000_000_000u32 / TARGET_FPS;
 
     // Initialize SDL
     let sdl_context = sdl2::init().unwrap();
@@ -94,7 +94,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     canvas
         .window()
         .subsystem()
-        .gl_set_swap_interval(SwapInterval::Immediate)
+        .gl_set_swap_interval(SwapInterval::VSync)
         .unwrap();
 
     let mut cpu = Cpu {
@@ -105,8 +105,10 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         halted: false,
     };
 
-    // main loop
     'running: loop {
+
+        // keeps the fps locked to 60 (or you have a 144hz monitor and ur chip8 runs really fast xd
+
         let frame_time = Instant::now();
 
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
@@ -191,6 +193,6 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         total_time_millis += frame_time.elapsed().as_millis();
         num_frames += 1;
 
-        std::thread::sleep(Duration::new(0, thread_sleep));
+        //std::thread::sleep(Duration::new(0, thread_sleep));
     }
 }

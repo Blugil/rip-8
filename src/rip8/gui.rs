@@ -38,6 +38,7 @@ pub fn draw_dropdown_menu(rip8: &Rip8, egui_ctx: &egui::Context, frame_rate: f32
                 ui.label(format!("SP: {:#04x}", rip8.sp));
                 ui.label(" ");
                 ui.label(format!("OP: {:#04x}", opcode));
+                ui.label(" ");
             });
             ui.separator();
             ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
@@ -56,14 +57,13 @@ pub fn draw_dropdown_menu(rip8: &Rip8, egui_ctx: &egui::Context, frame_rate: f32
             ui.separator();
             ui.with_layout(egui::Layout::top_down(egui::Align::TOP), |ui| {
                 ui.set_width(column_width * 2.0);
-                ui.label(" ");
+                ui.label("Debug keys");
+                ui.separator();
                 ui.label("Y: Reset");
-                ui.label(" ");
                 ui.label("P: pause/resume.");
-                ui.label(" ");
                 ui.label("O: Step Into.");
                 ui.label(" ");
-                ui.label(format!("Current framerate: {}", frame_rate));
+                ui.label(format!("FPS: {}", frame_rate));
             });
         });
     });
@@ -91,6 +91,7 @@ pub fn draw_game_window(
                     } else {
                         egui::Color32::from_rgb(14, 14, 14)
                     };
+                    // the round functions fix those pesky gaps between pixels
                     let rect = egui::Rect::from_min_max(
                         ui.painter().round_pos_to_pixels(egui::pos2(
                             x as f32 * pixel_size,
