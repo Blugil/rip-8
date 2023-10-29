@@ -61,11 +61,9 @@ pub fn draw_bottom_panel(egui_ctx: &egui::Context, frame_rate: f32) {
     egui::TopBottomPanel::bottom("bottom panel").show(&egui_ctx, |ui| {
         ui.set_height(500.0);
         ui.label(" ");
+        ui.label("Y: Reset. P: pause/resume.  O: Step Into.");
+        ui.label(" ");
         ui.label(format!("Current framerate: {}", frame_rate));
-        ui.label(" ");
-        ui.label("Press P to pause/resume the program");
-        ui.label(" ");
-        ui.label("Press O to step through instructions one by one\nOnly works when paused");
     });
 }
 

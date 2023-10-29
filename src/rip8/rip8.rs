@@ -14,7 +14,6 @@ pub struct Rip8 {
     pub pc: u16,
     pub delay: u8,
     pub sound: u8,
-    pub pause: bool,
     pub speed: u32,
     pub keypress: u16,
     pub keydown: Vec<bool>,
@@ -58,7 +57,6 @@ impl Rip8 {
             delay: 0,
             sound: 0,
             pc: 0x200,
-            pause: false,
             speed: 10,
             keypress: 0xFF,
             keydown: vec![false; 16],
@@ -66,27 +64,20 @@ impl Rip8 {
     }
 
     pub fn load_program(&mut self, path: String) -> io::Result<()> {
-        // some code to ensure proper bytes
-
         let mut f = File::open(path)?;
         let mut buffer: Vec<u8> = Vec::new();
-        // perhaps can read directly into the buffer to save time?
         match f.read_to_end(&mut buffer) {
             Ok(_) => {
                 for i in 0..buffer.len() {
                     self.buffer[0x200 + i] = buffer[i];
                 }
-                println!("loaded the program!");
                 Ok(())
             }
             Err(e) => Err(e),
         }
-
-        //print the first opcode of the program
     }
-    // needs to report collision
 
-    pub fn clear(&mut self) {
+    pub fn clear_display(&mut self) {
         for i in 0..SCREEN_WIDTH {
             for j in 0..SCREEN_HEIGHT {
                 self.display[j][i] = false;

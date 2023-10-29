@@ -23,11 +23,15 @@ use super::rip8::Rip8;
 const EMULATOR_WIDTH: u32 = 64;
 const EMULATOR_HEIGHT: u32 = 32;
 const TARGET_FPS: u32 = 60;
-const CLOCK_SPEED: u32 = 1000;
+const CLOCK_SPEED: u32 = 1200;
 
 const DPI: u32 = 2;
 
-pub fn create_window(rip8: &mut Rip8) {
+pub fn start_chip(rip8: &mut Rip8, rom: String) {
+
+    // loads the program
+    rip8.load_program(rom.clone()).unwrap();
+
     // Calculate the window size based on the pixel size
     let window_size = (1000 * DPI, 600 * DPI);
 
@@ -63,6 +67,7 @@ pub fn create_window(rip8: &mut Rip8) {
         egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(DPI as f32));
     let egui_ctx = egui::Context::default();
 
+    // sets UI style
     let mut style = (*egui_ctx.style()).clone();
     style.text_styles = [(
         TextStyle::Body,
@@ -130,6 +135,13 @@ pub fn create_window(rip8: &mut Rip8) {
                     if paused {
                         cpu.emulate_cycle(rip8);
                     }
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Y),
+                    ..
+                } => {
+                    *rip8 = Rip8::new();
+                    rip8.load_program(rom.clone()).unwrap();
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Escape),

@@ -32,7 +32,7 @@ impl Cpu {
                 match opcode & 0x00FF {
                     0x00E0 => {
                         //clear the screen
-                        rip8.clear();
+                        rip8.clear_display();
                     }
                     0x00EE => {
                         //return from subroutine
@@ -101,13 +101,10 @@ impl Cpu {
                         rip8.registers[0xF] = 0;
                     }
                     0x0004 => {
-                        //
-                        //checks to see if the
                         let (output, overflow) = reg_x_value.overflowing_add(reg_y_value);
                         rip8.registers[reg_x_index as usize] = (output & 0xFF) as u8;
                         rip8.registers[0xF as usize] = overflow as u8;
                     }
-                    //maybe wrong implementation of negatives?
                     0x0005 => {
                         //skip next instruction if the values are the same in Vx and Vy
                         let (output, overflow) = reg_x_value.overflowing_sub(reg_y_value);
@@ -115,7 +112,6 @@ impl Cpu {
                         rip8.registers[0xF as usize] = !overflow as u8;
                     }
                     0x0006 => {
-                        // order of this matters because vx might be vF
                         // vy shl vx is a quirk
                         rip8.registers[reg_x_index as usize] = reg_y_value >> 1;
                         rip8.registers[0xF as usize] = reg_y_value & 0x1;
@@ -135,7 +131,6 @@ impl Cpu {
                 rip8.pc += 2;
             }
             0x9000 => {
-                //skip next instruction if the values are the same in Vx and Vy
                 if reg_x_value != reg_y_value {
                     rip8.pc += 2;
                 }
@@ -155,7 +150,6 @@ impl Cpu {
                 rip8.registers[reg_x_index as usize] = rng & value;
                 rip8.pc += 2;
             }
-            //load register with immediate value
             //draw sprite to screen
             0xD000 => {
                 rip8.registers[0xF as usize] = 0;
@@ -175,11 +169,8 @@ impl Cpu {
                 }
 
                 for mem_offset in 0..nibble {
-                    //integer value for sprite byte stored in memory
                     let sprite = rip8.buffer[(rip8.i + mem_offset as u16) as usize].reverse_bits();
                     for sprite_offset in 0..8 {
-                        //if any pixel causes a collision set collision to true
-                        //if statement saves unnecessary modulus calls
                         if (sprite >> sprite_offset) & 0x1 == 1 {
 
                             let mut x = (x_wrap + sprite_offset) as usize;
@@ -198,7 +189,6 @@ impl Cpu {
 
                             // xor's the bit
                             collision = rip8.display[y][x] | collision;
-                            // true because it's the same condition in the if
                             rip8.display[y][x] = true ^ rip8.display[y][x];
                         }
                     }
@@ -209,7 +199,6 @@ impl Cpu {
             //keyboard related opcodes
             0xE000 => {
                 // all increment PC by 2
-                //TODO
                 match opcode & 0x00FF {
                     0x009E => {
                         if rip8.keydown[(reg_x_value & 0xF) as usize] {
@@ -263,7 +252,6 @@ impl Cpu {
                         rip8.buffer[(rip8.i + 1) as usize] = tens;
                         rip8.buffer[(rip8.i + 2) as usize] = ones;
                     }
-                    // reading and loading register values from memory
                     0x0055 => {
                         for x in 0..=reg_x_index {
                             rip8.buffer[rip8.i as usize] = rip8.registers[x as usize];

@@ -7,7 +7,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let mut rip8 = Rip8::new();
-    rip8.load_program(args[1].to_string()).unwrap();
+    let rom = args[1].to_string();
 
-    render::create_window(&mut rip8); // main window thread
+    render::start_chip(&mut rip8, rom.clone()); // main window thread
 }
