@@ -6,16 +6,15 @@ use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use sdl2::video::SwapInterval;
-use std::time::Instant;
-
 use sdl2::keyboard::Keycode;
 
 use std::time::Duration;
+use std::time::Instant;
 
 use egui_sdl2_gl as egui_backend;
 
 use super::cpu::Cpu;
-use super::gui::{draw_bottom_panel, draw_game_window, draw_side_panel};
+use super::gui::{draw_dropdown_menu, draw_game_window};
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
@@ -30,12 +29,11 @@ const CLOCK_SPEED: u32 = 1200;
 const DPI: u32 = 2;
 
 pub fn start_chip(rip8: &mut Rip8, rom: String) {
-
     // loads the program
     rip8.load_program(rom.clone()).unwrap();
 
     // Calculate the window size based on the pixel size
-    let window_size = (1000 * DPI, 600 * DPI);
+    let window_size = (EMULATOR_WIDTH * 20 * DPI, EMULATOR_HEIGHT * 20 * DPI);
 
     let timer_interval = CLOCK_SPEED / TARGET_FPS;
     let thread_sleep = 1_000_000_000u32 / TARGET_FPS;
@@ -71,10 +69,16 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
     // sets UI style
     let mut style = (*egui_ctx.style()).clone();
-    style.text_styles = [(
-        TextStyle::Body,
-        FontId::new(16.0 * DPI as f32, FontFamily::Monospace),
-    )]
+    style.text_styles = [
+        (
+            TextStyle::Body,
+            FontId::new(16.0 * DPI as f32, FontFamily::Monospace),
+        ),
+        (
+            TextStyle::Heading,
+            FontId::new(22.0 * DPI as f32, FontFamily::Monospace),
+        ),
+    ]
     .into();
     egui_ctx.set_style(style);
 
@@ -108,8 +112,9 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        draw_side_panel(rip8, &egui_ctx);
-        draw_bottom_panel(&egui_ctx, frame_rate_sampled);
+        //draw_side_panel(rip8, &egui_ctx);
+        //draw_bottom_panel(&egui_ctx, frame_rate_sampled);
+        draw_dropdown_menu(rip8, &egui_ctx, frame_rate_sampled);
         draw_game_window(rip8, &egui_ctx, EMULATOR_HEIGHT, EMULATOR_WIDTH);
 
         let FullOutput {
@@ -162,7 +167,15 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         painter.paint_jobs(None, textures_delta, paint_jobs);
         canvas.window().gl_swap_window();
 
+        //emulates x cycles per frame, decreases the timer each frame
         if !paused {
+            if rip8.delay > 0 {
+                rip8.delay -= 1;
+            }
+            if rip8.sound > 0 {
+                rip8.sound -= 1;
+            }
+
             for _ in 0..timer_interval {
                 cpu.emulate_cycle(rip8);
             }
