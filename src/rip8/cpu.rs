@@ -34,8 +34,8 @@ impl Cpu {
                     }
                     0x00EE => {
                         //return from subroutine
-                        rip8.pc = rip8.stack[rip8.sp as usize];
                         rip8.sp -= 1;
+                        rip8.pc = rip8.stack[rip8.sp as usize];
                     }
                     _ => panic!("unknown opcode: {:#04x}", opcode),
                 }
@@ -43,8 +43,8 @@ impl Cpu {
             }
             0x1000 => rip8.pc = opcode & 0x0FFF,
             0x2000 => {
-                rip8.sp += 1;
                 rip8.stack[rip8.sp as usize] = rip8.pc;
+                rip8.sp += 1;
                 rip8.pc = opcode & 0x0FFF;
             }
             0x3000 => {
@@ -163,11 +163,10 @@ impl Cpu {
 
                 for mem_offset in 0..nibble {
                     let sprite = rip8.buffer[(rip8.i + mem_offset as u16) as usize].reverse_bits();
+                    let mut y = (y_wrap + mem_offset) as usize;
                     for sprite_offset in 0..8 {
                         if (sprite >> sprite_offset) & 0x1 == 1 {
-
                             let mut x = (x_wrap + sprite_offset) as usize;
-                            let mut y = (y_wrap + mem_offset) as usize;
 
                             // remove when not clipping
                             if x > 63 {
@@ -262,22 +261,6 @@ impl Cpu {
                 rip8.pc += 2;
             }
             _ => panic!("unknown opcode: {:#04x}", opcode),
-        }
-
-        if rip8.delay > 0 {
-            self.delay_state += 1;
-            if self.delay_state as u32 == self.timer_interval {
-                rip8.delay -= 1;
-                self.delay_state = 0;
-            }
-        }
-
-        if rip8.sound > 0 {
-            self.sound_state += 1;
-            if self.sound_state as u32 == self.timer_interval {
-                rip8.sound -= 1;
-                self.sound_state = 0;
-            }
         }
     }
 }
