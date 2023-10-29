@@ -19,11 +19,13 @@ use super::gui::{draw_bottom_panel, draw_game_window, draw_side_panel};
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
+// THIS FILE IS A MESS AND ID RATHER U NOT LOOK AT IT <3
+
 //const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
 const EMULATOR_WIDTH: u32 = 64;
 const EMULATOR_HEIGHT: u32 = 32;
 const TARGET_FPS: u32 = 60;
-const CLOCK_SPEED: u32 = 1200;
+const CLOCK_SPEED: u32 = 600;
 
 const DPI: u32 = 2;
 

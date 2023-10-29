@@ -26,9 +26,7 @@ impl Cpu {
         let reg_y_value = rip8.registers[usize::from(reg_y_index)];
 
         match opcode & 0xF000 {
-            //load index register with immediate value
             0x0000 => {
-                // matches the 0x00EE and 0x000E opcodes
                 match opcode & 0x00FF {
                     0x00E0 => {
                         //clear the screen
@@ -43,9 +41,7 @@ impl Cpu {
                 }
                 rip8.pc += 2;
             }
-            //doesn't increment pc
             0x1000 => rip8.pc = opcode & 0x0FFF,
-            //doesn't increment pc
             0x2000 => {
                 rip8.sp += 1;
                 rip8.stack[rip8.sp as usize] = rip8.pc;
@@ -53,7 +49,6 @@ impl Cpu {
             }
             0x3000 => {
                 let value = opcode & 0x00FF;
-                //skip next instruction if value is equal to value stored in register
                 if reg_x_value == value as u8 {
                     rip8.pc += 2;
                 }
@@ -61,8 +56,6 @@ impl Cpu {
             }
             0x4000 => {
                 let value = opcode & 0x00FF;
-                //skip next instruction if the value is not equal to the value stored in the
-                //register
                 if reg_x_value != value as u8 {
                     rip8.pc += 2;
                 }
