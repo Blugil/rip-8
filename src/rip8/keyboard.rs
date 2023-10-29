@@ -1,5 +1,4 @@
 use ::sdl2::event::Event;
-use egui_sdl2_gl as egui_backend;
 use sdl2::keyboard::Keycode;
 
 use super::rip8::Rip8;

@@ -25,7 +25,7 @@ use super::rip8::Rip8;
 const EMULATOR_WIDTH: u32 = 64;
 const EMULATOR_HEIGHT: u32 = 32;
 const TARGET_FPS: u32 = 60;
-const CLOCK_SPEED: u32 = 600;
+const CLOCK_SPEED: u32 = 1200;
 
 const DPI: u32 = 2;
 
@@ -85,7 +85,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     let mut num_frames = 0;
     let mut frame_rate_sampled: f32 = 0.0;
 
-    let mut paused = true;
+    let mut paused = false;
 
     canvas
         .window()
