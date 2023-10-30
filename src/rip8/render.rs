@@ -14,7 +14,7 @@ use std::time::Instant;
 use egui_sdl2_gl as egui_backend;
 
 use super::cpu::Cpu;
-use super::gui::{draw_dropdown_menu, draw_game_window};
+use super::gui::{draw_dropdown_menu, draw_game_window, draw_menu_bar};
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
@@ -24,7 +24,7 @@ use super::rip8::Rip8;
 const EMULATOR_WIDTH: u32 = 64;
 const EMULATOR_HEIGHT: u32 = 32;
 const TARGET_FPS: u32 = 60;
-const CLOCK_SPEED: u32 = 1200;
+const CLOCK_SPEED: u32 = 720;
 
 const DPI: u32 = 2;
 
@@ -33,7 +33,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     rip8.load_program(rom.clone()).unwrap();
 
     // Calculate the window size based on the pixel size
-    let window_size = (EMULATOR_WIDTH * 20 * DPI, EMULATOR_HEIGHT * 20 * DPI);
+    let window_size = (EMULATOR_WIDTH * 20 * DPI, EMULATOR_HEIGHT * 20 * DPI + 80);
 
     let timer_interval = CLOCK_SPEED / TARGET_FPS;
     //let thread_sleep = 1_000_000_000u32 / TARGET_FPS;
@@ -59,7 +59,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         .build()
         .unwrap();
 
-    let mut canvas = window.into_canvas().build().unwrap();
+    let canvas = window.into_canvas().build().unwrap();
 
     let _ctx = canvas.window().gl_create_context().unwrap();
     let shader_ver = ShaderVersion::Adaptive;
@@ -72,11 +72,15 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     style.text_styles = [
         (
             TextStyle::Body,
-            FontId::new(16.0 * DPI as f32, FontFamily::Monospace),
+            FontId::new(32.0 as f32, FontFamily::Monospace),
         ),
         (
             TextStyle::Heading,
-            FontId::new(22.0 * DPI as f32, FontFamily::Monospace),
+            FontId::new(44.0 as f32, FontFamily::Monospace),
+        ),
+        (
+            TextStyle::Button,
+            FontId::new(32.0 as f32, FontFamily::Monospace),
         ),
     ]
     .into();
@@ -114,8 +118,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        //draw_side_panel(rip8, &egui_ctx);
-        //draw_bottom_panel(&egui_ctx, frame_rate_sampled);
+        draw_menu_bar(&egui_ctx);
         draw_dropdown_menu(rip8, &egui_ctx, frame_rate_sampled);
         draw_game_window(rip8, &egui_ctx, EMULATOR_HEIGHT, EMULATOR_WIDTH);
 
@@ -164,7 +167,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
             }
         }
 
-        canvas.clear();
+        //canvas.clear();
 
         painter.paint_jobs(None, textures_delta, paint_jobs);
         canvas.window().gl_swap_window();
