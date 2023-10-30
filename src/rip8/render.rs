@@ -8,7 +8,6 @@ use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use sdl2::video::SwapInterval;
 use sdl2::keyboard::Keycode;
 
-use std::time::Duration;
 use std::time::Instant;
 
 use egui_sdl2_gl as egui_backend;
@@ -35,9 +34,6 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     // Calculate the window size based on the pixel size
     let window_size = (EMULATOR_WIDTH * 20 * DPI, EMULATOR_HEIGHT * 20 * DPI + 80);
 
-    let timer_interval = CLOCK_SPEED / TARGET_FPS;
-    //let thread_sleep = 1_000_000_000u32 / TARGET_FPS;
-
     // Initialize SDL
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -50,7 +46,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     // setting up the window
     let window = video_subsystem
         .window(
-            "Demo: Egui backend for SDL2 + GL",
+            "Emulator",
             window_size.0,
             window_size.1,
         )
@@ -84,16 +80,9 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         ),
     ]
     .into();
+
     egui_ctx.set_style(style);
 
-    let start_time = Instant::now();
-
-    // debug related
-    let mut total_time_millis = 0;
-    let mut num_frames = 0;
-    let mut frame_rate_sampled: f32 = 0.0;
-
-    let mut paused = false;
 
     canvas
         .window()
@@ -101,6 +90,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         .gl_set_swap_interval(SwapInterval::VSync)
         .unwrap();
 
+    let timer_interval = CLOCK_SPEED / TARGET_FPS;
     let mut cpu = Cpu {
         clock_speed: CLOCK_SPEED,
         timer_interval,
@@ -109,17 +99,31 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         halted: false,
     };
 
+    // debug stuff
+    let mut debug_active = true;
+    let mut paused = false;
+
+    let mut total_time_millis = 0;
+    let mut num_frames = 0;
+    let mut frame_rate_sampled: f32 = 0.0;
+
+    let start_time = Instant::now();
+
     'running: loop {
 
         // keeps the fps locked to 60 (or you have a 144hz monitor and ur chip8 runs really fast xd
-
         let frame_time = Instant::now();
 
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        draw_menu_bar(&egui_ctx);
-        draw_dropdown_menu(rip8, &egui_ctx, frame_rate_sampled);
+        // draws the egui to the display
+        draw_menu_bar(&egui_ctx, &mut debug_active);
+
+        if debug_active {
+            draw_dropdown_menu(rip8, &egui_ctx, frame_rate_sampled);
+        }
+
         draw_game_window(rip8, &egui_ctx, EMULATOR_HEIGHT, EMULATOR_WIDTH);
 
         let FullOutput {

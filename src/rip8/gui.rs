@@ -1,4 +1,4 @@
-use egui_backend::egui;
+use egui_backend::egui::{self, Ui};
 use egui_backend::egui::Style;
 
 use egui_sdl2_gl as egui_backend;
@@ -75,7 +75,7 @@ pub fn draw_dropdown_menu(rip8: &Rip8, egui_ctx: &egui::Context, frame_rate: f32
 
 
 
-pub fn draw_menu_bar(egui_ctx: &egui::Context) {
+pub fn draw_menu_bar(egui_ctx: &egui::Context, debug: &mut bool) {
     egui::TopBottomPanel::top("Menu bar")
         .show(egui_ctx, |ui| {
         egui::menu::bar(ui, |ui| {
@@ -83,6 +83,13 @@ pub fn draw_menu_bar(egui_ctx: &egui::Context) {
             ui.label(" ");
             ui.menu_button("File", |ui| {
                 ui.label("test");
+            });
+            ui.label(" ");
+            ui.menu_button("View", |ui| {
+                ui.set_width(200.0);
+                ui.label("Debug info");
+                ui.separator();
+                ui.checkbox(debug, "Debug");
             });
         });
     });
