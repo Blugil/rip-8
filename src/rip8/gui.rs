@@ -3,9 +3,19 @@ use egui_backend::egui::Style;
 
 use egui_sdl2_gl as egui_backend;
 
+use super::render::DebugInfo;
 use super::rip8::Rip8;
 
-pub fn draw_dropdown_menu(rip8: &Rip8, egui_ctx: &egui::Context, frame_rate: f32) {
+
+pub fn draw_gui(rip8: &Rip8, egui_ctx: &egui::Context, debug_info: &mut DebugInfo, emulator_height: u32, emulator_width: u32) {
+    draw_menu_bar(egui_ctx, &mut debug_info.debug_active);
+    if debug_info.debug_active {
+        draw_debug_window(rip8, egui_ctx, debug_info);
+    }
+    draw_game_window(rip8, egui_ctx, emulator_width, emulator_height);
+}
+
+pub fn draw_debug_window(rip8: &Rip8, egui_ctx: &egui::Context, debug_info: &DebugInfo) {
     let opcode = u16::from(rip8.buffer.get(usize::from(rip8.pc)).unwrap().to_owned()) << 8
         | u16::from(
             rip8.buffer
@@ -14,7 +24,7 @@ pub fn draw_dropdown_menu(rip8: &Rip8, egui_ctx: &egui::Context, frame_rate: f32
                 .to_owned(),
         );
     egui::Window::new("Debug Window")
-        .default_open(false)
+        .default_open(true)
         .collapsible(true)
         .resizable(false)
         .show(&egui_ctx, |ui| {
@@ -67,7 +77,8 @@ pub fn draw_dropdown_menu(rip8: &Rip8, egui_ctx: &egui::Context, frame_rate: f32
                 ui.label("P: pause/resume.");
                 ui.label("O: Step Into.");
                 ui.label(" ");
-                ui.label(format!("FPS: {}", frame_rate));
+                ui.label(format!("FPS: {}", debug_info.frame_rate_sampled));
+                ui.label(format!("Clock: {}Hz", debug_info.ipf_sampled));
             });
         });
     });
@@ -79,17 +90,17 @@ pub fn draw_menu_bar(egui_ctx: &egui::Context, debug: &mut bool) {
     egui::TopBottomPanel::top("Menu bar")
         .show(egui_ctx, |ui| {
         egui::menu::bar(ui, |ui| {
+            ui.spacing_mut().button_padding = [48.0, 24.0].into();
+            ui.spacing_mut().interact_size = [24.0, 24.0].into();
             ui.set_height(80.0);
-            ui.label(" ");
             ui.menu_button("File", |ui| {
                 ui.label("test");
             });
-            ui.label(" ");
             ui.menu_button("View", |ui| {
                 ui.set_width(200.0);
                 ui.label("Debug info");
                 ui.separator();
-                ui.checkbox(debug, "Debug");
+                ui.checkbox(debug, " Debug").on_hover_text("Set's the debug window to on or off.");
             });
         });
     });
@@ -103,15 +114,17 @@ pub fn draw_game_window(
 ) {
 
     egui::CentralPanel::default().show(&egui_ctx, |ui| {
+
+        //  calculates the x,y position of the top left corner of the current widget
         let x_start = ui.min_rect().left_top().x;
         let y_start = ui.min_rect().left_top().y;
+
         egui::Frame::dark_canvas(&egui_ctx.style())
             .show(ui, |ui| {
 
-
             let width = ui.available_size()[0];
             let height = ui.available_size()[1];
-            let pixel_size = if (width / 64.0) >= (height / 32.0) {
+            let pixel_size = if (width / screen_width as f32) >= (height / screen_height as f32) {
                 height / screen_height as f32
             } else {
                 width / screen_width as f32

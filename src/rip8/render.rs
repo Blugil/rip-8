@@ -1,19 +1,19 @@
 //extern crate sdl2;
 
 //use sdl2::event::Event;
-use egui_backend::egui::{FontFamily, FontId, FullOutput, TextStyle};
+use egui_backend::egui::{FontFamily, FontId, FullOutput, TextStyle, Button, Style};
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use sdl2::video::SwapInterval;
 use sdl2::keyboard::Keycode;
 
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 use egui_sdl2_gl as egui_backend;
 
 use super::cpu::Cpu;
-use super::gui::{draw_dropdown_menu, draw_game_window, draw_menu_bar};
+use super::gui::{draw_debug_menu, draw_game_window, draw_menu_bar, draw_gui};
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
@@ -26,6 +26,17 @@ const TARGET_FPS: u32 = 60;
 const CLOCK_SPEED: u32 = 720;
 
 const DPI: u32 = 2;
+
+pub struct DebugInfo {
+    pub debug_active: bool,
+    pub paused: bool,
+    pub total_time_millis: u32,
+    pub num_frame: u32,
+    pub frame_rate_sampled: f32,
+    pub ipf_sampled: f32,
+    pub ipf_count: u32
+}
+
 
 pub fn start_chip(rip8: &mut Rip8, rom: String) {
     // loads the program
@@ -76,7 +87,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         ),
         (
             TextStyle::Button,
-            FontId::new(32.0 as f32, FontFamily::Monospace),
+            FontId::new(32.0 as f32, FontFamily::Proportional),
         ),
     ]
     .into();
@@ -99,32 +110,30 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         halted: false,
     };
 
-    // debug stuff
-    let mut debug_active = true;
-    let mut paused = false;
+    let mut debug_info = DebugInfo {
+        debug_active: false,
+        paused: false,
+        total_time_millis: 0,
+        num_frame: 0,
+        frame_rate_sampled: 0.0,
+        ipf_sampled: 0.0,
+        ipf_count: 0,
+    };
 
-    let mut total_time_millis = 0;
-    let mut num_frames = 0;
-    let mut frame_rate_sampled: f32 = 0.0;
+    // debug stuff
 
     let start_time = Instant::now();
 
     'running: loop {
 
-        // keeps the fps locked to 60 (or you have a 144hz monitor and ur chip8 runs really fast xd
+        // keeps the fps locked to 60 or you have a 144hz monitor and ur chip8 runs really fast xd
         let frame_time = Instant::now();
 
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
         // draws the egui to the display
-        draw_menu_bar(&egui_ctx, &mut debug_active);
-
-        if debug_active {
-            draw_dropdown_menu(rip8, &egui_ctx, frame_rate_sampled);
-        }
-
-        draw_game_window(rip8, &egui_ctx, EMULATOR_HEIGHT, EMULATOR_WIDTH);
+        draw_gui(rip8, &egui_ctx, &mut debug_info, EMULATOR_WIDTH, EMULATOR_HEIGHT);
 
         let FullOutput {
             platform_output,
@@ -143,12 +152,12 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
                 Event::KeyDown {
                     keycode: Some(Keycode::P),
                     ..
-                } => paused = !paused,
+                } => debug_info.paused = !debug_info.paused,
                 Event::KeyDown {
                     keycode: Some(Keycode::O),
                     ..
                 } => {
-                    if paused {
+                    if debug_info.paused {
                         cpu.emulate_cycle(rip8);
                     }
                 }
@@ -177,7 +186,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         canvas.window().gl_swap_window();
 
         //emulates x cycles per frame, decreases the timer each frame
-        if !paused {
+        if !debug_info.paused {
             if rip8.delay > 0 {
                 rip8.delay -= 1;
             }
@@ -187,19 +196,30 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
             for _ in 0..timer_interval {
                 cpu.emulate_cycle(rip8);
+                debug_info.ipf_count += 1;
             }
         }
 
-        if num_frames == 60 {
-            frame_rate_sampled = 1.0 / ((total_time_millis as f32 / 60.0) * 0.001);
-            total_time_millis = 0;
-            num_frames = 0;
+        // debug related calculations
+        if debug_info.num_frame == 60 {
+            debug_info.frame_rate_sampled = 1.0 / ((debug_info.total_time_millis as f32 / 60.0) * 0.001);
+
+            debug_info.ipf_sampled = debug_info.ipf_count as f32 / (debug_info.total_time_millis as f32 * 0.001);
+
+            debug_info.ipf_count = 0;
+            debug_info.total_time_millis = 0;
+            debug_info.num_frame = 0;
             continue 'running;
         }
 
-        total_time_millis += frame_time.elapsed().as_millis();
-        num_frames += 1;
+        let elapsed_time: u32 = frame_time.elapsed().as_millis() as u32;
 
-        //std::thread::sleep(Duration::new(0, thread_sleep));
+        debug_info.total_time_millis += elapsed_time;
+        debug_info.num_frame += 1;
+        
+        //sleep for the delta between current frame time and desired frametime
+        //let sleep_duration = std::cmp::max(0, 16_667 as i32 - (elapsed_time as i32));
+        //println!("sleep duration: {}", sleep_duration);
+        //std::thread::sleep(Duration::new(0, sleep_duration.try_into().unwrap()));
     }
 }
