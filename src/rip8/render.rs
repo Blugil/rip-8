@@ -1,19 +1,19 @@
 //extern crate sdl2;
 
 //use sdl2::event::Event;
-use egui_backend::egui::{FontFamily, FontId, FullOutput, TextStyle, Button, Style};
+use egui_backend::egui::FullOutput;
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
-use sdl2::video::SwapInterval;
 use sdl2::keyboard::Keycode;
+use sdl2::video::SwapInterval;
 
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 use egui_sdl2_gl as egui_backend;
 
 use super::cpu::Cpu;
-use super::gui::{draw_debug_menu, draw_game_window, draw_menu_bar, draw_gui};
+use super::gui::{draw_gui, set_gui_style};
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
@@ -34,9 +34,8 @@ pub struct DebugInfo {
     pub num_frame: u32,
     pub frame_rate_sampled: f32,
     pub ipf_sampled: f32,
-    pub ipf_count: u32
+    pub ipf_count: u32,
 }
-
 
 pub fn start_chip(rip8: &mut Rip8, rom: String) {
     // loads the program
@@ -56,11 +55,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
     // setting up the window
     let window = video_subsystem
-        .window(
-            "Emulator",
-            window_size.0,
-            window_size.1,
-        )
+        .window("Emulator", window_size.0, window_size.1)
         .opengl()
         .position_centered()
         .build()
@@ -74,42 +69,21 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(DPI as f32));
     let egui_ctx = egui::Context::default();
 
-    // sets UI style
-    let mut style = (*egui_ctx.style()).clone();
-    style.text_styles = [
-        (
-            TextStyle::Body,
-            FontId::new(32.0 as f32, FontFamily::Monospace),
-        ),
-        (
-            TextStyle::Heading,
-            FontId::new(44.0 as f32, FontFamily::Monospace),
-        ),
-        (
-            TextStyle::Button,
-            FontId::new(32.0 as f32, FontFamily::Proportional),
-        ),
-    ]
-    .into();
-
-    egui_ctx.set_style(style);
-
-
     canvas
         .window()
         .subsystem()
         .gl_set_swap_interval(SwapInterval::VSync)
         .unwrap();
 
-    let timer_interval = CLOCK_SPEED / TARGET_FPS;
     let mut cpu = Cpu {
         clock_speed: CLOCK_SPEED,
-        timer_interval,
+        timer_interval: CLOCK_SPEED / TARGET_FPS,
         delay_state: 0,
         sound_state: 0,
         halted: false,
     };
 
+    // debug stuff
     let mut debug_info = DebugInfo {
         debug_active: false,
         paused: false,
@@ -120,12 +94,11 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         ipf_count: 0,
     };
 
-    // debug stuff
+    egui_ctx.set_style(set_gui_style());
 
     let start_time = Instant::now();
 
     'running: loop {
-
         // keeps the fps locked to 60 or you have a 144hz monitor and ur chip8 runs really fast xd
         let frame_time = Instant::now();
 
@@ -133,7 +106,13 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         egui_ctx.begin_frame(egui_state.input.take());
 
         // draws the egui to the display
-        draw_gui(rip8, &egui_ctx, &mut debug_info, EMULATOR_WIDTH, EMULATOR_HEIGHT);
+        draw_gui(
+            rip8,
+            &egui_ctx,
+            &mut debug_info,
+            EMULATOR_WIDTH,
+            EMULATOR_HEIGHT,
+        );
 
         let FullOutput {
             platform_output,
@@ -181,8 +160,6 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         }
 
         //canvas.clear();
-
-        painter.paint_jobs(None, textures_delta, paint_jobs);
         canvas.window().gl_swap_window();
 
         //emulates x cycles per frame, decreases the timer each frame
@@ -194,17 +171,21 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
                 rip8.sound -= 1;
             }
 
-            for _ in 0..timer_interval {
+            for _ in 0..cpu.timer_interval {
                 cpu.emulate_cycle(rip8);
                 debug_info.ipf_count += 1;
             }
         }
 
+        painter.paint_jobs(None, textures_delta, paint_jobs);
+
         // debug related calculations
         if debug_info.num_frame == 60 {
-            debug_info.frame_rate_sampled = 1.0 / ((debug_info.total_time_millis as f32 / 60.0) * 0.001);
+            debug_info.frame_rate_sampled =
+                1.0 / ((debug_info.total_time_millis as f32 / 60.0) * 0.001);
 
-            debug_info.ipf_sampled = debug_info.ipf_count as f32 / (debug_info.total_time_millis as f32 * 0.001);
+            debug_info.ipf_sampled =
+                debug_info.ipf_count as f32 / (debug_info.total_time_millis as f32 * 0.001);
 
             debug_info.ipf_count = 0;
             debug_info.total_time_millis = 0;
@@ -216,7 +197,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
         debug_info.total_time_millis += elapsed_time;
         debug_info.num_frame += 1;
-        
+
         //sleep for the delta between current frame time and desired frametime
         //let sleep_duration = std::cmp::max(0, 16_667 as i32 - (elapsed_time as i32));
         //println!("sleep duration: {}", sleep_duration);
