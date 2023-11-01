@@ -8,7 +8,7 @@ use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use sdl2::keyboard::Keycode;
 use sdl2::video::SwapInterval;
 
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 
 use egui_sdl2_gl as egui_backend;
 

@@ -1,5 +1,5 @@
 use egui_backend::egui::Style;
-use egui_backend::egui::{self, FontFamily, FontId, TextStyle, Ui};
+use egui_backend::egui::{self, FontFamily, FontId, TextStyle};
 
 use egui_sdl2_gl as egui_backend;
 
