@@ -8,7 +8,7 @@ use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use sdl2::keyboard::Keycode;
 use sdl2::video::SwapInterval;
 
-use std::time::{Instant};
+use std::time::Instant;
 
 use egui_sdl2_gl as egui_backend;
 
@@ -25,7 +25,7 @@ const EMULATOR_HEIGHT: u32 = 32;
 const TARGET_FPS: u32 = 60;
 const CLOCK_SPEED: u32 = 720;
 
-const DPI: u32 = 2;
+const DPI: u32 = 1;
 
 pub struct DebugInfo {
     pub debug_active: bool,
@@ -42,7 +42,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     rip8.load_program(rom.clone()).unwrap();
 
     // Calculate the window size based on the pixel size
-    let window_size = (EMULATOR_WIDTH * 20 * DPI, EMULATOR_HEIGHT * 20 * DPI + 80);
+    let window_size = (EMULATOR_WIDTH * 20, EMULATOR_HEIGHT * 20 + 80);
 
     // Initialize SDL
     let sdl_context = sdl2::init().unwrap();
@@ -61,19 +61,20 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         .build()
         .unwrap();
 
-    let canvas = window.into_canvas().build().unwrap();
+    //let canvas = window.into_canvas().build().unwrap();
 
-    let _ctx = canvas.window().gl_create_context().unwrap();
-    let shader_ver = ShaderVersion::Adaptive;
+    let _ctx = window.gl_create_context().unwrap();
+    let shader_ver = ShaderVersion::Default;
     let (mut painter, mut egui_state) =
-        egui_backend::with_sdl2(&canvas.window(), shader_ver, DpiScaling::Custom(DPI as f32));
+        egui_backend::with_sdl2(&window, shader_ver, DpiScaling::Custom(DPI as f32));
     let egui_ctx = egui::Context::default();
 
-    canvas
-        .window()
+    window
         .subsystem()
         .gl_set_swap_interval(SwapInterval::VSync)
         .unwrap();
+
+    //let mut canvas = window.into_canvas().build().unwrap();
 
     let mut cpu = Cpu {
         clock_speed: CLOCK_SPEED,
@@ -105,7 +106,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        // draws the egui to the display
+        //draws the egui to the display
         draw_gui(
             rip8,
             &egui_ctx,
@@ -121,9 +122,12 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
             shapes,
         } = egui_ctx.end_frame();
 
-        egui_state.process_output(&canvas.window(), &platform_output);
+        egui_state.process_output(&window, &platform_output);
 
         let paint_jobs = egui_ctx.tessellate(shapes);
+        painter.paint_jobs(None, textures_delta, paint_jobs);
+
+        window.gl_swap_window();
 
         // Handle events
         for event in sdl_context.event_pump().unwrap().poll_iter() {
@@ -154,13 +158,12 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
                 _ => {
                     // Process input event
                     handle_key_event(rip8, event.clone());
-                    egui_state.process_input(&canvas.window(), event.clone(), &mut painter);
+                    egui_state.process_input(&window, event.clone(), &mut painter);
                 }
             }
         }
 
         //canvas.clear();
-        canvas.window().gl_swap_window();
 
         //emulates x cycles per frame, decreases the timer each frame
         if !debug_info.paused {
@@ -177,15 +180,13 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
             }
         }
 
-        painter.paint_jobs(None, textures_delta, paint_jobs);
-
-        // debug related calculations
+         //debug related calculations
         if debug_info.num_frame == 60 {
             debug_info.frame_rate_sampled =
-                1.0 / ((debug_info.total_time_millis as f32 / 60.0) * 0.001);
+             1.0 / ((debug_info.total_time_millis as f32 / 60.0) * 0.001);
 
             debug_info.ipf_sampled =
-                debug_info.ipf_count as f32 / (debug_info.total_time_millis as f32 * 0.001);
+             debug_info.ipf_count as f32 / (debug_info.total_time_millis as f32 * 0.001);
 
             debug_info.ipf_count = 0;
             debug_info.total_time_millis = 0;
