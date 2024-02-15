@@ -13,12 +13,14 @@ Thank you for taking a look at the first of hopefully many projects of mine in t
 Oh it's also tailored to 4k screens change the DPI scaling const from 2 to 1.
 
 ## Working on:
-- [ ] refactor the window and canvas rendering methods
+- [ ] refactor the window and SDL2 canvas rendering methods
     - [x] fix MacOS flickering bugs
-    - [ ] fix MacOS framerate calculation
-- [ ] get display waiting working for true accuracy
+    - [x] fix MacOS framerate calculation
+- [ ] more advanced menu and window sizing?
+- [ ] handle not having a rom input (default start, loading rom functionality?)
 - [x] fix the fps inconsistency issues
 - [ ] more advanced cli arguments for debug mode
-- [ ] making it make noise
-- [ ] dpi scaling but like fr
+- [ ] enabling the noise feature
+- [ ] dpi scaling issues on macos
+- [ ] get display waiting working for true accuracy
 

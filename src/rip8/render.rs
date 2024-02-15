@@ -13,11 +13,12 @@ use std::time::Duration;
 
 use egui_sdl2_gl as egui_backend;
 
+use crate::windows::gui::{draw_gui, set_gui_style};
 use super::cpu::Cpu;
-use super::gui::{draw_gui, set_gui_style};
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
+const PIXEL_SIZE: u32 = 20;
 const EMULATOR_WIDTH: u32 = 64;
 const EMULATOR_HEIGHT: u32 = 32;
 const TARGET_FPS: u32 = 60;
@@ -41,7 +42,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     rip8.load_program(rom.clone()).unwrap();
 
     // Calculate the window size based on the pixel size
-    let window_size = (EMULATOR_WIDTH * 20, EMULATOR_HEIGHT * 20 + 80);
+    let window_size = (EMULATOR_WIDTH * PIXEL_SIZE, EMULATOR_HEIGHT * PIXEL_SIZE + 40);
 
     // Initialize SDL
     let sdl_context = sdl2::init().unwrap();
@@ -54,7 +55,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
     // setting up the window
     let window = video_subsystem
-        .window("Emulator", window_size.0, window_size.1)
+        .window("Chip-8 Emulator", window_size.0, window_size.1)
         .opengl()
         .position_centered()
         .build()

@@ -1,9 +1,6 @@
 use egui_backend::egui::{self};
 use egui_sdl2_gl as egui_backend;
 
-
-
-
 pub fn draw_menu_bar(egui_ctx: &egui::Context, debug: &mut bool) {
     egui::TopBottomPanel::top("Menu bar").show(egui_ctx, |ui| {
         egui::menu::bar(ui, |ui| {
