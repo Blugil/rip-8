@@ -14,6 +14,8 @@ Oh it's also tailored to 4k screens change the DPI scaling const from 2 to 1.
 
 ## Working on:
 - [ ] refactor the window and canvas rendering methods
+    - [x] fix MacOS flickering bugs
+    - [ ] fix MacOS framerate calculation
 - [ ] get display waiting working for true accuracy
 - [x] fix the fps inconsistency issues
 - [ ] more advanced cli arguments for debug mode

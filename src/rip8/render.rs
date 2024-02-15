@@ -9,6 +9,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::video::SwapInterval;
 
 use std::time::Instant;
+use std::time::Duration;
 
 use egui_sdl2_gl as egui_backend;
 
@@ -17,13 +18,10 @@ use super::gui::{draw_gui, set_gui_style};
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
 
-// THIS FILE IS A MESS AND ID RATHER U NOT LOOK AT IT <3
-
-//const PIXEL_SIZE: u32 = 32; // Size of each pixel in pixels
 const EMULATOR_WIDTH: u32 = 64;
 const EMULATOR_HEIGHT: u32 = 32;
 const TARGET_FPS: u32 = 60;
-const CLOCK_SPEED: u32 = 720;
+const CLOCK_SPEED: u32 = 700;
 
 const DPI: u32 = 1;
 
@@ -35,6 +33,7 @@ pub struct DebugInfo {
     pub frame_rate_sampled: f32,
     pub ipf_sampled: f32,
     pub ipf_count: u32,
+    pub elapsed_time: u32,
 }
 
 pub fn start_chip(rip8: &mut Rip8, rom: String) {
@@ -93,6 +92,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
         frame_rate_sampled: 0.0,
         ipf_sampled: 0.0,
         ipf_count: 0,
+        elapsed_time: 0,
     };
 
     egui_ctx.set_style(set_gui_style());
@@ -100,7 +100,6 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
     let start_time = Instant::now();
 
     'running: loop {
-        // keeps the fps locked to 60 or you have a 144hz monitor and ur chip8 runs really fast xd
         let frame_time = Instant::now();
 
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
@@ -167,6 +166,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
         //emulates x cycles per frame, decreases the timer each frame
         if !debug_info.paused {
+
             if rip8.delay > 0 {
                 rip8.delay -= 1;
             }
@@ -174,34 +174,35 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
                 rip8.sound -= 1;
             }
 
-            for _ in 0..cpu.timer_interval {
+            for _ in 0..cpu.timer_interval + 1 {
                 cpu.emulate_cycle(rip8);
                 debug_info.ipf_count += 1;
             }
         }
 
+
+
          //debug related calculations
-        if debug_info.num_frame == 60 {
-            debug_info.frame_rate_sampled =
-             1.0 / ((debug_info.total_time_millis as f32 / 60.0) * 0.001);
+        if debug_info.num_frame == TARGET_FPS {
 
             debug_info.ipf_sampled =
              debug_info.ipf_count as f32 / (debug_info.total_time_millis as f32 * 0.001);
-
+            
+            debug_info.frame_rate_sampled = TARGET_FPS as f32 / (debug_info.total_time_millis as f32 / 1_000f32);
             debug_info.ipf_count = 0;
             debug_info.total_time_millis = 0;
             debug_info.num_frame = 0;
-            continue 'running;
         }
 
-        let elapsed_time: u32 = frame_time.elapsed().as_millis() as u32;
+        debug_info.elapsed_time = frame_time.elapsed().as_millis() as u32;
 
-        debug_info.total_time_millis += elapsed_time;
+        if debug_info.elapsed_time < 17 {
+            std::thread::sleep(Duration::new(0, (1_000_000_000u32 / 60) - (debug_info.elapsed_time * 1_000_000u32)));
+        }
+
         debug_info.num_frame += 1;
+        debug_info.elapsed_time = frame_time.elapsed().as_millis() as u32;
+        debug_info.total_time_millis += debug_info.elapsed_time;
 
-        //sleep for the delta between current frame time and desired frametime
-        //let sleep_duration = std::cmp::max(0, 16_667 as i32 - (elapsed_time as i32));
-        //println!("sleep duration: {}", sleep_duration);
-        //std::thread::sleep(Duration::new(0, sleep_duration.try_into().unwrap()));
     }
 }
