@@ -1,4 +1,4 @@
-use egui_backend::egui::{self, FontFamily, FontId, TextStyle};
+use egui_backend::egui::{self};
 
 use egui_sdl2_gl as egui_backend;
 

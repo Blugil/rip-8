@@ -1,8 +1,8 @@
-use egui_backend::egui::{self, FontFamily, FontId, TextStyle};
+use egui_backend::egui::{self};
 use egui_sdl2_gl as egui_backend;
 
-use crate::rip8::render::DebugInfo;
-use crate::Rip8;
+
+
 
 pub fn draw_menu_bar(egui_ctx: &egui::Context, debug: &mut bool) {
     egui::TopBottomPanel::top("Menu bar").show(egui_ctx, |ui| {
