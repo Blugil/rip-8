@@ -1,4 +1,5 @@
 mod rip8;
+mod windows;
 use rip8::render;
 use rip8::rip8::Rip8;
 use std::env;
