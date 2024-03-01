@@ -2,7 +2,7 @@ use egui_backend::egui::{self};
 use egui_sdl2_gl as egui_backend;
 
 use crate::rip8::render::DebugInfo;
-use crate::Rip8;
+use crate::rip8::rip8::Rip8;
 
 
 pub fn draw_debug_window(rip8: &Rip8, egui_ctx: &egui::Context, debug_info: &mut DebugInfo) {

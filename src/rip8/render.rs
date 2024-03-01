@@ -1,5 +1,5 @@
 //extern crate sdl2;
-
+use std::env;
 //use sdl2::event::Event;
 use egui_backend::egui::FullOutput;
 use egui_backend::sdl2::video::GLProfile;
@@ -37,8 +37,14 @@ pub struct DebugInfo {
     pub elapsed_time: u32,
 }
 
-pub fn start_chip(rip8: &mut Rip8, rom: String) {
+
+pub fn start_chip() {
     // loads the program
+    let args: Vec<String> = env::args().collect();
+
+    let mut rip8 = Rip8::new();
+    let rom = args[1].to_string();
+
     rip8.load_program(rom.clone()).unwrap();
 
     // Calculate the window size based on the pixel size
@@ -71,7 +77,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
     window
         .subsystem()
-        .gl_set_swap_interval(SwapInterval::VSync)
+        .gl_set_swap_interval(SwapInterval::Immediate)
         .unwrap();
 
     //let mut canvas = window.into_canvas().build().unwrap();
@@ -108,7 +114,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
 
         //draws the egui to the display
         draw_gui(
-            rip8,
+            &mut rip8,
             &egui_ctx,
             &mut debug_info,
             EMULATOR_WIDTH,
@@ -141,14 +147,14 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
                     ..
                 } => {
                     if debug_info.paused {
-                        cpu.emulate_cycle(rip8);
+                        cpu.emulate_cycle(&mut rip8);
                     }
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::Y),
                     ..
                 } => {
-                    *rip8 = Rip8::new();
+                    rip8 = Rip8::new();
                     rip8.load_program(rom.clone()).unwrap();
                 }
                 Event::KeyDown {
@@ -157,7 +163,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
                 } => break 'running,
                 _ => {
                     // Process input event
-                    handle_key_event(rip8, event.clone());
+                    handle_key_event(&mut rip8, event.clone());
                     egui_state.process_input(&window, event.clone(), &mut painter);
                 }
             }
@@ -176,7 +182,7 @@ pub fn start_chip(rip8: &mut Rip8, rom: String) {
             }
 
             for _ in 0..cpu.timer_interval + 1 {
-                cpu.emulate_cycle(rip8);
+                cpu.emulate_cycle(&mut rip8);
                 debug_info.ipf_count += 1;
             }
         }

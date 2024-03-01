@@ -3,8 +3,9 @@ use egui_backend::egui::{self, FontFamily, FontId, TextStyle};
 
 use egui_sdl2_gl as egui_backend;
 
+
 use crate::render::DebugInfo;
-use crate::Rip8;
+use crate::rip8::rip8::Rip8;
 
 use crate::windows::game::draw_game_window;
 use crate::windows::debug::draw_debug_window;

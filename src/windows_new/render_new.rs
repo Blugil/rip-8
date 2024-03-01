@@ -1,10 +1,17 @@
+use std::time::{Duration, Instant};
+use std::env;
+
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
-use sdl2::video::Window;
+use sdl2::video::{SwapInterval, Window};
 
+use crate::rip8::cpu::Cpu;
+use crate::rip8::rip8::Rip8;
+use crate::rip8::keyboard::handle_key_event;
+use crate::windows::debug;
 
 
 const WINDOW_WIDTH: u32 = 800;
@@ -21,10 +28,12 @@ const TARGET_FPS: u32 = 60;
 const CLOCK_SPEED: u32 = 700;
 
 
+
+
 pub struct DebugInfo {
     pub debug_active: bool,
     pub paused: bool,
-    pub total_time_millis: u32,
+    pub total_time_nanos: u32,
     pub num_frame: u32,
     pub frame_rate_sampled: f32,
     pub ipf_sampled: f32,
@@ -34,24 +43,39 @@ pub struct DebugInfo {
 
 
 pub fn render() {
+
+    let args: Vec<String> = env::args().collect();
+
+    let mut rip8 = Rip8::new();
+    let rom = args[1].to_string();
+
+    rip8.load_program(rom.clone()).unwrap();
+
     // Initialize SDL2
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem.window("Rip-8", WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered()
         .resizable()
+        .opengl()
         .build()
         .unwrap();
 
     let mut canvas: Canvas<Window> = window.into_canvas().build().unwrap();
 
-    
+    let mut cpu = Cpu {
+        clock_speed: CLOCK_SPEED,
+        timer_interval: CLOCK_SPEED / TARGET_FPS,
+        delay_state: 0,
+        sound_state: 0,
+        halted: false,
+    };
 
 
     let mut debug_info = DebugInfo {
         debug_active: false,
         paused: false,
-        total_time_millis: 0,
+        total_time_nanos: 0,
         num_frame: 0,
         frame_rate_sampled: 0.0,
         ipf_sampled: 0.0,
@@ -60,29 +84,75 @@ pub fn render() {
     };
 
 
+    let start_time = Instant::now();
 
     // Set up an event pump
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     'running: loop {
+
+        let frame_time = Instant::now();
+
+        canvas.set_draw_color(Color::BLACK);
+        canvas.clear();
+
+        draw_emulator_screen(&mut canvas);
+
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running;
                 }
-                _ => {}
+                _ => {
+                    // Process input event
+                    handle_key_event(&mut rip8, event.clone());
+                }
             }
         }
 
-        // Clear the canvas
-        canvas.set_draw_color(Color::BLACK);
-        canvas.clear();
+        if !debug_info.paused {
 
-        // Draw the chessboard
-        draw_emulator_screen(&mut canvas);
+            if rip8.delay > 0 {
+                rip8.delay -= 1;
+            }
+            if rip8.sound > 0 {
+                rip8.sound -= 1;
+            }
+
+            for _ in 0..cpu.timer_interval + 1 {
+                cpu.emulate_cycle(&mut rip8);
+                debug_info.ipf_count += 1;
+            }
+        }
 
         // Present the canvas
         canvas.present();
+
+        debug_info.num_frame += 1;
+        if debug_info.num_frame == TARGET_FPS {
+
+            debug_info.ipf_sampled =
+             debug_info.ipf_count as f32 / (debug_info.total_time_nanos as f32 * 0.000000001);
+            
+            debug_info.frame_rate_sampled = TARGET_FPS as f32 / (debug_info.total_time_nanos as f32 / 1_000_000_000f32);
+            debug_info.ipf_count = 0;
+            debug_info.total_time_nanos = 0;
+            debug_info.num_frame = 0;
+
+            println!("sampled fps: {} \n time: {}", debug_info.frame_rate_sampled, start_time.elapsed().as_millis());
+        }
+
+        debug_info.elapsed_time = frame_time.elapsed().as_nanos() as u32;
+        //println!("elapsed time {}", frame_time.elapsed().as_nanos());
+        if debug_info.elapsed_time < 1_000_000_000u32 / 60 {
+            //println!("sleep time: {}", 1_000_000_000u32 / 60 - (debug_info.elapsed_time));
+            std::thread::sleep(Duration::new(0, (1_000_000_000u32 / 60) - (debug_info.elapsed_time)));
+        }
+
+        debug_info.elapsed_time = frame_time.elapsed().as_nanos() as u32;
+        debug_info.total_time_nanos += debug_info.elapsed_time;
+
+
     }
 }
 

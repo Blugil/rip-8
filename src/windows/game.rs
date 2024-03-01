@@ -2,8 +2,7 @@ use egui_backend::egui::{self};
 
 use egui_sdl2_gl as egui_backend;
 
-use crate::Rip8;
-
+use crate::rip8::rip8::Rip8;
 
 pub fn draw_game_window(rip8: &Rip8, egui_ctx: &egui::Context, screen_height: u32, screen_width: u32) {
     egui::CentralPanel::default().show(&egui_ctx, |ui| {
