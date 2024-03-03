@@ -24,4 +24,3 @@ pub fn draw_menu_bar(egui_ctx: &egui::Context, debug: &mut bool) {
         });
     });
 }
-

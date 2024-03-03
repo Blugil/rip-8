@@ -8,15 +8,17 @@ use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use sdl2::keyboard::Keycode;
 use sdl2::video::SwapInterval;
 
-use std::time::Instant;
 use std::time::Duration;
+use std::time::Instant;
 
 use egui_sdl2_gl as egui_backend;
 
-use crate::windows::gui::{draw_gui, set_gui_style};
 use super::cpu::Cpu;
 use super::keyboard::handle_key_event;
 use super::rip8::Rip8;
+use crate::windows::debug::draw_debug_window;
+use crate::windows::game::draw_game_window;
+use crate::windows::gui::{draw_gui, set_gui_style};
 
 const PIXEL_SIZE: u32 = 20;
 const EMULATOR_WIDTH: u32 = 64;
@@ -29,14 +31,13 @@ const DPI: u32 = 1;
 pub struct DebugInfo {
     pub debug_active: bool,
     pub paused: bool,
-    pub total_time_millis: u32,
+    pub total_time_nanos: u128,
     pub num_frame: u32,
     pub frame_rate_sampled: f32,
     pub ipf_sampled: f32,
     pub ipf_count: u32,
-    pub elapsed_time: u32,
+    pub elapsed_time: u128,
 }
-
 
 pub fn start_chip() {
     // loads the program
@@ -48,7 +49,10 @@ pub fn start_chip() {
     rip8.load_program(rom.clone()).unwrap();
 
     // Calculate the window size based on the pixel size
-    let window_size = (EMULATOR_WIDTH * PIXEL_SIZE, EMULATOR_HEIGHT * PIXEL_SIZE + 40);
+    let window_size = (
+        EMULATOR_WIDTH * PIXEL_SIZE,
+        EMULATOR_HEIGHT * PIXEL_SIZE + 40,
+    );
 
     // Initialize SDL
     let sdl_context = sdl2::init().unwrap();
@@ -94,7 +98,7 @@ pub fn start_chip() {
     let mut debug_info = DebugInfo {
         debug_active: false,
         paused: false,
-        total_time_millis: 0,
+        total_time_nanos: 0,
         num_frame: 0,
         frame_rate_sampled: 0.0,
         ipf_sampled: 0.0,
@@ -112,27 +116,6 @@ pub fn start_chip() {
         egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
         egui_ctx.begin_frame(egui_state.input.take());
 
-        //draws the egui to the display
-        draw_gui(
-            &mut rip8,
-            &egui_ctx,
-            &mut debug_info,
-            EMULATOR_WIDTH,
-            EMULATOR_HEIGHT,
-        );
-
-        let FullOutput {
-            platform_output,
-            repaint_after: _,
-            textures_delta,
-            shapes,
-        } = egui_ctx.end_frame();
-
-        egui_state.process_output(&window, &platform_output);
-
-        let paint_jobs = egui_ctx.tessellate(shapes);
-        painter.paint_jobs(None, textures_delta, paint_jobs);
-
         window.gl_swap_window();
 
         // Handle events
@@ -142,6 +125,10 @@ pub fn start_chip() {
                     keycode: Some(Keycode::P),
                     ..
                 } => debug_info.paused = !debug_info.paused,
+                Event::KeyDown {
+                    keycode: Some(Keycode::L),
+                    ..
+                } => debug_info.debug_active = !debug_info.debug_active,
                 Event::KeyDown {
                     keycode: Some(Keycode::O),
                     ..
@@ -169,11 +156,24 @@ pub fn start_chip() {
             }
         }
 
-        //canvas.clear();
+        if debug_info.debug_active {
+            draw_debug_window(&mut rip8, &egui_ctx, &mut debug_info);
+        }
+        draw_game_window(&mut rip8, &egui_ctx, EMULATOR_HEIGHT, EMULATOR_WIDTH);
 
-        //emulates x cycles per frame, decreases the timer each frame
+        let FullOutput {
+            platform_output,
+            repaint_after: _,
+            textures_delta,
+            shapes,
+        } = egui_ctx.end_frame();
+
+        egui_state.process_output(&window, &platform_output);
+
+        let paint_jobs = egui_ctx.tessellate(shapes);
+        painter.paint_jobs(None, textures_delta, paint_jobs);
+
         if !debug_info.paused {
-
             if rip8.delay > 0 {
                 rip8.delay -= 1;
             }
@@ -187,29 +187,27 @@ pub fn start_chip() {
             }
         }
 
-
-
-         //debug related calculations
+        debug_info.num_frame += 1;
         if debug_info.num_frame == TARGET_FPS {
-
             debug_info.ipf_sampled =
-             debug_info.ipf_count as f32 / (debug_info.total_time_millis as f32 * 0.001);
-            
-            debug_info.frame_rate_sampled = TARGET_FPS as f32 / (debug_info.total_time_millis as f32 / 1_000f32);
+                debug_info.ipf_count as f32 / (debug_info.total_time_nanos as f32 * 0.000000001);
+
+            debug_info.frame_rate_sampled =
+                TARGET_FPS as f32 / (debug_info.total_time_nanos as f32 / 1_000_000_000f32);
             debug_info.ipf_count = 0;
-            debug_info.total_time_millis = 0;
+            debug_info.total_time_nanos = 0;
             debug_info.num_frame = 0;
         }
 
-        debug_info.elapsed_time = frame_time.elapsed().as_millis() as u32;
-
-        if debug_info.elapsed_time < 17 {
-            std::thread::sleep(Duration::new(0, (1_000_000_000u32 / 60) - (debug_info.elapsed_time * 1_000_000u32)));
+        debug_info.elapsed_time = frame_time.elapsed().as_nanos();
+        if debug_info.elapsed_time < (1_000_000_000u32 / 64) as u128 {
+            std::thread::sleep(Duration::new(
+                0,
+                ((1_000_000_000u32 / 64) as u128 - (debug_info.elapsed_time)) as u32,
+            ));
         }
 
-        debug_info.num_frame += 1;
-        debug_info.elapsed_time = frame_time.elapsed().as_millis() as u32;
-        debug_info.total_time_millis += debug_info.elapsed_time;
-
+        debug_info.elapsed_time = frame_time.elapsed().as_nanos();
+        debug_info.total_time_nanos += debug_info.elapsed_time;
     }
 }

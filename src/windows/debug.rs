@@ -4,7 +4,6 @@ use egui_sdl2_gl as egui_backend;
 use crate::rip8::render::DebugInfo;
 use crate::rip8::rip8::Rip8;
 
-
 pub fn draw_debug_window(rip8: &Rip8, egui_ctx: &egui::Context, debug_info: &mut DebugInfo) {
     let opcode = u16::from(rip8.buffer.get(usize::from(rip8.pc)).unwrap().to_owned()) << 8
         | u16::from(

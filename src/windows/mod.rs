@@ -1,4 +1,4 @@
-pub mod game;
 pub mod debug;
-pub mod menu;
+pub mod game;
 pub mod gui;
+pub mod menu;
