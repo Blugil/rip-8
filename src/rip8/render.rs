@@ -94,6 +94,7 @@ pub fn start_chip() {
         halted: false,
     };
 
+
     // debug stuff
     let mut debug_info = DebugInfo {
         debug_active: false,
